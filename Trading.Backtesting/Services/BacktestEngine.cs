@@ -1,16 +1,18 @@
-﻿
-namespace Trading.Backtesting;
+﻿namespace Trading.Backtesting;
 
 public class BacktestEngine : IBacktestEngine
 {
-    public BacktestExchange Exchange { get; } = new();
+    public BacktestExchange Exchange { get; } 
     public IDataFeed DataFeed { get; }
     public IStrategy Strategy { get; }
+    public ILogger? Logger { get; set; }
 
-    public BacktestEngine(IDataFeed dataFeed, IStrategy strategy)
+    public BacktestEngine(IDataFeed dataFeed, IStrategy strategy, BacktestExchange exchange, ILogger? logger)
     {
         DataFeed = dataFeed;
         Strategy = strategy;
+        Exchange = exchange;
+        Logger = logger;
     }
 
     public async Task<BacktestEnginePerformanceResult> RunAsync(Action<BacktestOptions> configureOptions)
@@ -36,16 +38,32 @@ public class BacktestEngine : IBacktestEngine
             .ToList();
 
         // Exchange erhält das Initiale Cash und verwaltet es (Einzahlung)
-        Console.WriteLine($"Trading Simulation on {runningCandles.Count} Candles with initial {options.InitialCash:0.00 $}.");
+        Logger?.LogInformation($"Trading Simulation on {runningCandles.Count} Candles with initial {options.InitialCash:0.00 $}.");
 
-        Exchange.Initialize(runningCandles, options.InitialCash);
+        Exchange.Logger = Logger;
+        Exchange.Initialize(dataFeedCandles, options.InitialCash, options.Symbol);
 
         await Exchange.ConnectAsync();
 
-        var statesTasks = runningCandles.Select(async candle => await RunOnCandleAsync(candle, options.Symbol));
-        var states = await Task.WhenAll(statesTasks);
+        List<BacktestEngineCandleState> states = new();
+        for (int i = 0; i < runningCandles.Count; i++)
+        {
+            Candle? candle = runningCandles[i];
+            var state = await RunOnCandleAsync(candle, options.Symbol);
+            states.Add(state);
+            LogProcess(i, runningCandles.Count);
+        }
+        LogProcess(runningCandles.Count, runningCandles.Count);
 
         return BacktestEnginePerformanceResult.FromStates(states);
+    }
+
+    private void LogProcess(int i, int count)
+    {
+        if (i % (count / 25) == 0 || i == count)
+        {
+            Logger?.LogInformation($"Candles processed: {(double)i / count:0.00%}");
+        }
     }
 
     private async Task<BacktestEngineCandleState> RunOnCandleAsync(Candle candle, string symbol)
@@ -57,9 +75,10 @@ public class BacktestEngine : IBacktestEngine
 
             // strategy
             var decision = await Strategy.ExecuteAsync(candle);
+            Logger?.LogDebug($"{candle}: {decision}");
 
             // Exchange reacts on strategy decision
-            var exchangeState = await Exchange.HandleNewDecisionAsync(candle, decision, symbol);
+            var exchangeState = await Exchange.HandleNewDecisionAsync(decision);
 
             return BacktestEngineCandleState.Create(candle, decision, exchangeState);
         }

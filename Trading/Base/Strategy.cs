@@ -10,6 +10,7 @@ public abstract class Strategy : IStrategy
     }
 
     // Services
+    public ILogger? Logger { get; set; }
     protected IExchange Exchange { get; }
 
     // Definition

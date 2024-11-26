@@ -9,3 +9,4 @@ global using System.Text.Json;
 global using Microsoft.Extensions.DependencyInjection;
 global using Convertification.Attributes;
 global using System.Text.Json.Serialization;
+global using Microsoft.Extensions.Logging;

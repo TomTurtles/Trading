@@ -2,7 +2,7 @@
 
 public class BacktestOrderManagement
 {
-    private ConcurrentDictionary<DateTime, Order> OrderHistory { get; set; } = [];
+    private ConcurrentDictionary<DateTime, Order> OrderHistory { get; } = new ConcurrentDictionary<DateTime, Order>(DateTimeEqualityComparer.Use());
     private Dictionary<DateTime, Order> OrderedOrders => new(OrderHistory.OrderBy(o => o.Key));
     private IEnumerable<Order> Orders => OrderedOrders.Values;
 
@@ -14,10 +14,13 @@ public class BacktestOrderManagement
         => Task.FromResult(Orders.Where(o => o.Symbol.Equals(symbol, StringComparison.InvariantCultureIgnoreCase)));
     public Task<IEnumerable<Order>> GetAllOrdersAsync() => Task.FromResult(Orders);
     public Task<IEnumerable<Order>> GetOpenOrdersAsync() => GetOrdersAsync(OrderStatus.Pending);
+    public Task<IEnumerable<Order>> GetOpenOrdersAsync(string symbol) => GetOrdersAsync(symbol, OrderStatus.Pending);
     public Task<bool> HasOpenOrdersAsync(string symbol) 
         => Task.FromResult(Orders.Any(o => o.Symbol.Equals(symbol, StringComparison.InvariantCultureIgnoreCase) && o.Status.Equals(OrderStatus.Pending)));
     public Task<IEnumerable<Order>> GetOrdersAsync(OrderStatus status)
         => Task.FromResult(OrderHistory.Values.Where(o => o.Status.Equals(status)));
+    public Task<IEnumerable<Order>> GetOrdersAsync(string symbol, OrderStatus status)
+        => Task.FromResult(OrderHistory.Values.Where(o => o.Symbol.Equals(symbol, StringComparison.InvariantCultureIgnoreCase)).Where(o => o.Status.Equals(status)));
 
     #endregion get
 
@@ -64,6 +67,7 @@ public class BacktestOrderManagement
         // Simuliere das Hinzufügen der Order und Warten auf Ausführung
         if (order.Type != OrderType.Market)
         {
+            if (order.Quantity <= 0) throw new InvalidOperationException($"invalid order quantity '{order.Quantity}'");
             if (order.Price is null || order.Price <= 0) throw new InvalidOperationException($"invalid order price '{order.Price}'");
             Place(candle, order);
         }
@@ -76,6 +80,7 @@ public class BacktestOrderManagement
         // Simuliere die Ausführung der Market-Order
         if (order.Type == OrderType.Market)
         {
+            if (order.Quantity <= 0) throw new InvalidOperationException($"invalid order quantity '{order.Quantity}'");
             if (executionPrice <= 0) throw new InvalidOperationException($"invalid execution price '{executionPrice}'");
             Place(candle, order);
             Execute(candle, order, executionPrice, feeRate);

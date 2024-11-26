@@ -11,4 +11,10 @@
     <ProjectReference Include="..\Trading\Trading.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="Convertification">
+      <HintPath>..\..\Convertification\Convertification\bin\Debug\netstandard2.1\Convertification.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

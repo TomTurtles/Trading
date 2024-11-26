@@ -1,9 +1,8 @@
-﻿using System.Linq;
-
-namespace Trading;
+﻿namespace Trading;
 
 public class StrategyDecision
 {
+    [ConvertStringEnum]
     public StrategyDecisionType Type { get; set; }
     public string? Reason { get; set; }
     public Dictionary<string, object> Parameters { get; set; }
@@ -77,5 +76,10 @@ public class StrategyDecision
         return obj is null
             ? throw new NullReferenceException($"no parameter with key '{key}'")
             : (T)obj ?? throw new InvalidCastException($"casting to '{nameof(T)} did not work as expected'");
+    }
+
+    public override string ToString()
+    {
+        return $"{Type}{(Reason is null ? "": ": " + Reason)}";
     }
 }

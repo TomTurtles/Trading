@@ -56,4 +56,9 @@ public class Order
             Status = OrderStatus.Pending,
         };
     }
+
+    public override string ToString()
+    {
+        return $"{Side}: {Price} x {Quantity} = {Price * Quantity}";
+    }
 }

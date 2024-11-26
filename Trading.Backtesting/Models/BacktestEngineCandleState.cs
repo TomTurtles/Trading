@@ -1,8 +1,10 @@
 ﻿namespace Trading.Backtesting;
 public class BacktestEngineCandleState
 {
-    public Candle Candle {  get; set; }
-    public StrategyDecision? Decision { get; set; }
+    public DateTime Timestamp {  get; set; }
+
+    [ConvertStringEnum]
+    public StrategyDecisionType Decision { get; set; }
     public ExchangeState? ExchangeState { get; set; }
     public BacktestEngineCandleStateError? Error { get; set; }
 
@@ -11,8 +13,8 @@ public class BacktestEngineCandleState
     {
         return new BacktestEngineCandleState()
         {
-            Candle = candle,
-            Decision = decision,
+            Timestamp = candle.Timestamp,
+            Decision = decision.Type,
             ExchangeState = exchangeState
         };
     }
@@ -21,7 +23,7 @@ public class BacktestEngineCandleState
     {
         return new BacktestEngineCandleState()
         {
-            Candle = candle,
+            Timestamp = candle.Timestamp,
             Error = new BacktestEngineCandleStateError()
             {
                 Message = ex.Message,

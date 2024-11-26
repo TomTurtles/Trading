@@ -1,4 +1,4 @@
-﻿namespace Trading;
+﻿namespace Trading.Backtesting;
 
 public interface IDataFeed
 {

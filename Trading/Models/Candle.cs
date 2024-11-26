@@ -11,4 +11,9 @@ public class Candle
     public double High { get; set; }
     public double Low { get; set; }
     public double Volume { get; set; }
+
+    public override string ToString()
+    {
+        return $"{Timestamp} | {Close}";
+    }
 }

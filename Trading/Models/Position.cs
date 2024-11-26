@@ -1,4 +1,6 @@
-﻿namespace Trading;
+﻿using System.Text;
+
+namespace Trading;
 
 public class Position
 {
@@ -27,7 +29,9 @@ public class Position
     /// <summary>
     /// Depending on executed Orders
     /// </summary>
-    public double Quantity => EntryOrders.Sum(o => o.Quantity) - ExitOrders.Sum(o => o.Quantity);
+    public double EntryQuantity => EntryOrders.Sum(o => o.Quantity);
+    public double ExitQuantity => ExitOrders.Sum(o => o.Quantity);
+    public double Quantity => EntryQuantity - ExitQuantity;
 
     /// <summary>
     /// Last Entry Order Execution Time
@@ -54,6 +58,11 @@ public class Position
     /// </summary>
     public double Fee => ExecutedOrders.Sum(o => o.ExecutedFee!.Value);
 
+    /// <summary>
+    /// PNL
+    /// </summary>
+    public double? PNL => ExitOrders.Any() ? (Side == PositionSide.Long ? ExitPrice - EntryPrice : EntryPrice - ExitPrice) * ExitQuantity : null;
+
 
     #region Orders
     private List<Order> ExecutedOrders { get; } = [];
@@ -68,7 +77,6 @@ public class Position
     public static Position CreateFromOrder(Order order)
     {
         if (order.Quantity <= 0) throw new InvalidOperationException($"invalid quantity: '{order.Quantity}'");
-        if (order.Status != OrderStatus.Pending) throw new InvalidOperationException($"status: '{order.Status}' invalid");
 
         var position = new Position()
         {
@@ -78,7 +86,9 @@ public class Position
             TakePrice = order.TakePrice,
         };
 
-        position.ExecutedOrders.Add(order);
+        if (order.Status != OrderStatus.Filled) order.Status = OrderStatus.Filled;
+
+        position.AddExecutedOrder(order);
 
         return position;
     }
@@ -93,5 +103,23 @@ public class Position
         if (order.Quantity <= 0) throw new InvalidOperationException($"invalid quantity: '{order.Quantity}'");
 
         ExecutedOrders.Add(order);
+    }
+
+    public override string ToString()
+    {
+        var sb = new StringBuilder()
+            .AppendLine($"")
+            .AppendLine($"")
+            .AppendLine($"{Id}")
+            .AppendLine($"{Side}, Entry: {EntryPrice} x {EntryQuantity} at {EntryTime}");
+
+        if (ExitPrice is not null)
+        {
+            sb.AppendLine($"Exit: ({ExitPrice}) at {ExitTime}");
+            sb.AppendLine($"PNL: {PNL}");
+            sb.AppendLine($"Fee: {Fee}");
+        }
+
+        return sb.ToString();
     }
 }

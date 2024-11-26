@@ -3,6 +3,7 @@
 public class BacktestExchange : IExchange
 {
     // services
+    public ILogger? Logger { get; set; }
     private BacktestCashManagement CashManagement { get; } = new BacktestCashManagement();
     private BacktestOrderManagement OrderManagement { get; } = new BacktestOrderManagement();
     private BacktestPositionManagement PositionManagement { get; } = new BacktestPositionManagement();
@@ -16,13 +17,15 @@ public class BacktestExchange : IExchange
 
     // state
     private bool IsConnected { get; set; } = false;
+    private string? Symbol { get; set; }
 
     #region Initialize
 
-    internal void Initialize(IEnumerable<Candle> candles, double initialCash)
+    internal void Initialize(IEnumerable<Candle> candles, double initialCash, string symbol)
     {
         Candles = candles;
         CashManagement.InitializeCash(initialCash);
+        Symbol = symbol;
     }
 
     #endregion Initialize
@@ -44,7 +47,6 @@ public class BacktestExchange : IExchange
     #endregion Connection
 
     #region Candles
-    internal void SetCurrentCandle(Candle candle) { CurrentCandle = candle; }
 
     public Task<Candle> GetCurrentCandleAsync(string symbol, CandleInterval interval)
     {
@@ -108,12 +110,14 @@ public class BacktestExchange : IExchange
     {
         var equity = 0d;
         equity += await GetMarginAsync();
-        var positions = await GetPositionsAsync();
-        foreach (var position in positions)
+
+        var position = await GetOpenPositionAsync(Symbol!);
+        if (position != null)
         {
-            var marketPrice = await GetMarketPriceAsync(position.Symbol);
-            equity += (marketPrice * position.Quantity);
+            var marketPrice = await GetMarketPriceAsync(Symbol!);
+            equity += position.GetValue(marketPrice);
         }
+
         return equity;
     }
 
@@ -122,10 +126,35 @@ public class BacktestExchange : IExchange
     #region Orders
 
     // Abrufen der Orders für ein bestimmtes Symbol
-    public Task<IEnumerable<Order>> GetOrdersAsync(string symbol) => OrderManagement.GetOrdersAsync(symbol);
+    public Task<IEnumerable<Order>> GetOrdersAsync(string symbol) => OrderManagement.GetOpenOrdersAsync(symbol);
     public Task<IEnumerable<Order>> GetAllOrdersAsync() => OrderManagement.GetAllOrdersAsync();
-    public Task PlaceOrderAsync(Order order) => OrderManagement.PlaceOrderAsync(CurrentCandle, order);
-    public async Task PlaceMarketOrderAsync(Order order, double executionPrice) => await OrderManagement.PlaceMarketOrderAsync(CurrentCandle, order, executionPrice, await GetFeeRateAsync(order.Symbol));
+    private async Task<IEnumerable<Order>> GetPendingOrdersAsync() => await OrderManagement.GetOpenOrdersAsync();
+    public async Task PlaceOrderAsync(Order order)
+    {
+        await OrderManagement.PlaceOrderAsync(CurrentCandle, order);
+        Logger?.LogDebug("order placed ({order})", order);
+    }
+
+    public async Task PlaceMarketOrderAsync(Order order, double executionPrice)
+    {
+        var feeRate = await GetFeeRateAsync(order.Symbol);
+        var cost = executionPrice * (feeRate + order.Quantity);
+        if (!CashManagement.CanAfford(cost))
+        {
+            Logger?.LogWarning("insufficient cash ({cash}), cannot afford order: {order}", await CashManagement.GetMarginAsync(), order);
+            return;
+        }
+
+        await OrderManagement.PlaceMarketOrderAsync(CurrentCandle, order, executionPrice, feeRate);
+        Logger?.LogDebug("market order placed and executed: {order}", order);
+
+        var position = await PositionManagement.OpenPositionAsync(CurrentCandle, order);
+        Logger?.LogDebug("position opened: {position}", position);
+
+        CashManagement.AddCash(CurrentCandle, (-1) * position.EntryPrice * position.EntryQuantity);
+        Logger?.LogDebug("cash now: {cash}", await CashManagement.GetMarginAsync());
+    }
+
     public Task UpdateOrderAsync(string id, Action<Order?> configureOrder) => OrderManagement.UpdateOrderAsync(CurrentCandle, id, configureOrder);
     public Task CancelOrderAsync(string id) => OrderManagement.CancelOrderAsync(CurrentCandle, id);
     public Task CancelAllOrdersAsync() => OrderManagement.CancelAllOrdersAsync(CurrentCandle);
@@ -137,9 +166,36 @@ public class BacktestExchange : IExchange
     #region Positions
 
     // Abrufen der aktuellen Position
-    public Task<Position?> GetPositionAsync(string symbol) => PositionManagement.GetPositionAsync(symbol);
-    public Task<IEnumerable<Position>> GetPositionsAsync() => PositionManagement.GetPositionsAsync();
-    public Task UpdatePositionAsync(string id, Action<Position> configure) => PositionManagement.UpdatePositionAsync(CurrentCandle, id, configure);
+    public async Task<Position?> GetPositionAsync(string symbol) => await PositionManagement.GetPositionAsync();
+    private async Task<Position?> GetOpenPositionAsync(string symbol) => await PositionManagement.GetPositionAsync();
+    public async Task<IEnumerable<Position>> GetPositionsAsync() => await PositionManagement.GetPositionHistoryAsync();
+    public async Task UpdatePositionAsync(string id, Action<Position> configure)
+    {
+        var position = await PositionManagement.UpdatePositionAsync(CurrentCandle, id, configure);
+        Logger?.LogDebug("position updated: {position}", position);
+    }
+
+    public async Task ClosePositionAtPriceAsync(string symbol, double price)
+    {
+        var position = await GetPositionAsync(symbol);
+        if (position == null) return;
+        await ClosePositionAtPriceAsync(position, price);
+    }
+
+    public async Task ClosePositionAtPriceAsync(Position position, double price)
+    {
+        var feeRate = await GetFeeRateAsync(position.Symbol);
+        var liquidatedPosition = await PositionManagement.LiquidatePositionAsync(CurrentCandle, position, price, feeRate);
+
+        if (liquidatedPosition is not null && liquidatedPosition.IsClosed)
+        {
+            Logger?.LogDebug("position closed: {position}", liquidatedPosition);
+
+            var value = liquidatedPosition.EntryPrice * liquidatedPosition.ExitQuantity + liquidatedPosition.PNL!.Value * (1 - feeRate);
+            CashManagement.AddCash(CurrentCandle, value);
+            Logger?.LogDebug("cash now: {cash}", await CashManagement.GetMarginAsync());
+        }
+    }
 
     #endregion Positions
 
@@ -155,36 +211,37 @@ public class BacktestExchange : IExchange
     /// <exception cref="NotImplementedException"></exception>
     internal async void HandleNewCandle(Candle candle, string symbol)
     {
+        CurrentCandle = candle;
+
         var marketPrice = await GetMarketPriceAsync(symbol);
         var feeRate = await GetFeeRateAsync(symbol);
 
         // margin call?
         if (CashManagement.ShouldMarginCall())
         {
-            while (await PositionManagement.HasCurrentOpenPositionsAsync(symbol))
+            Logger?.LogWarning("MARGIN CALL");
+            while (await PositionManagement.HasCurrentOpenPositionAsync())
             {
-                await PositionManagement.TryLiquidatePositionAsync(candle, symbol, marketPrice, feeRate);
+                await ClosePositionAtPriceAsync(symbol, marketPrice);
             }
         }
         else
         {
             // stoploss/takeprofit?
-            if (await PositionManagement.HasCurrentOpenPositionsAsync(symbol))
+            if (await PositionManagement.HasCurrentOpenPositionAsync())
             {
-                var position = await PositionManagement.GetOpenPositionAsync(symbol);
+                var position = await PositionManagement.GetPositionAsync();
 
-                // takeprofig
-                if (position!.TakePrice is not null && candle.PriceHit(position!.TakePrice!.Value))
+                // takeprofit
+                if (position!.TakePrice is not null && CurrentCandle.PriceHit(position!.TakePrice!.Value))
                 {
-                    await PositionManagement.LiquidatePositionAsync(candle, position, position!.TakePrice!.Value, feeRate);
-                    CashManagement.AddCash(candle, position!.Quantity * position!.TakePrice!.Value - feeRate);
+                    await ClosePositionAtPriceAsync(symbol, position!.TakePrice!.Value);
                 }
 
                 // stoploss
-                if (position!.StopPrice is not null && candle.PriceHit(position!.StopPrice!.Value))
+                if (position!.StopPrice is not null && CurrentCandle.PriceHit(position!.StopPrice!.Value))
                 {
-                    await PositionManagement.LiquidatePositionAsync(candle, position, position!.StopPrice!.Value, feeRate);
-                    CashManagement.AddCash(candle, position!.Quantity * position!.StopPrice!.Value - feeRate);
+                    await ClosePositionAtPriceAsync(symbol, position!.StopPrice!.Value);
                 }
             }
 
@@ -193,13 +250,28 @@ public class BacktestExchange : IExchange
             {
                 var openOrders = await OrderManagement.GetOpenOrdersAsync();
 
-                var ordersToExecute = openOrders.Where(order => order.CandleHit(candle));
+                var ordersToExecute = openOrders.Where(order => order.CandleHit(CurrentCandle));
 
                 foreach (var order in ordersToExecute)
                 {
-                    var executionPrice = order.Price ?? candle.Close;
-                    var executionTime = candle.Timestamp;
+                    var executionPrice = order.Price ?? CurrentCandle.Close;
+                    var executionTime = CurrentCandle.Timestamp;
+                    var cost = executionPrice * (feeRate + order.Quantity);
+
+                    if (!CashManagement.CanAfford(cost))
+                    {
+                        Logger?.LogWarning("insufficient cash ({cash}), cannot afford order: {order}", await CashManagement.GetMarginAsync(), order);
+                        return;
+                    }
+
                     order.SetExecuted(executionTime, executionPrice, feeRate);
+                    Logger?.LogDebug("order executed: {order}", order);
+
+                    var position = await PositionManagement.OpenPositionAsync(CurrentCandle, order);
+                    Logger?.LogDebug("position opened: {position}", position);
+
+                    CashManagement.AddCash(CurrentCandle, (-1) * position.EntryPrice * position.EntryQuantity);
+                    Logger?.LogDebug("cash now: {cash}", await CashManagement.GetMarginAsync());
                 }
             }
         }
@@ -209,97 +281,95 @@ public class BacktestExchange : IExchange
     /// </summary>
     /// <param name="candle"></param>
     /// <exception cref="NotImplementedException"></exception>
-    internal async Task<ExchangeState> HandleNewDecisionAsync(Candle candle, StrategyDecision decision, string symbol)
+    internal async Task<ExchangeState> HandleNewDecisionAsync(StrategyDecision decision)
     {
         switch (decision.Type)
         {
-            case Trading.StrategyDecisionType.GoLong:
-                await HandleGoLongDecisionAsync(candle, decision, symbol);
+            case StrategyDecisionType.GoLong:
+                await HandleGoLongDecisionAsync(decision);
                 break;
-            case Trading.StrategyDecisionType.GoShort:
-                await HandleGoShortDecisionAsync(candle, decision, symbol);
+            case StrategyDecisionType.GoShort:
+                await HandleGoShortDecisionAsync(decision);
                 break;
-            case Trading.StrategyDecisionType.CancelOrders:
-                await HandleCancelOrdersDecisionAsync(candle, decision, symbol);
+            case StrategyDecisionType.CancelOrders:
+                await HandleCancelOrdersDecisionAsync(decision);
                 break;
-            case Trading.StrategyDecisionType.UpdatePosition:
-                await HandleUpdatePositionDecisionAsync(candle, decision, symbol);
+            case StrategyDecisionType.UpdatePosition:
+                await HandleUpdatePositionDecisionAsync(decision);
                 break;
-            case Trading.StrategyDecisionType.ClosePosition:
-                await HandleClosePositionDecisionAsync(candle, decision, symbol);
+            case StrategyDecisionType.ClosePosition:
+                await HandleClosePositionDecisionAsync(decision);
                 break;
 
-            case Trading.StrategyDecisionType.Error:
+            case StrategyDecisionType.Error:
 
                 break;
 
             // no action when these
-            case Trading.StrategyDecisionType.Wait:
+            case StrategyDecisionType.Wait:
             default:
                 break;
         }
 
-        return new ExchangeState()
-        {
-            Cash = await GetMarginAsync(),
-            Orders = await GetAllOrdersAsync(),
-            Positions = await GetPositionsAsync(),
-        };
+        return ExchangeState.Create(
+                await GetMarginAsync(),
+                await GetPendingOrdersAsync(),
+                await GetOpenPositionAsync(Symbol!),
+                await GetMarketPriceAsync(Symbol!),
+                await GetEquityAsync()
+            );
     }
 
-    private async Task HandleClosePositionDecisionAsync(Candle candle, StrategyDecision decision, string symbol)
+    private async Task HandleClosePositionDecisionAsync(StrategyDecision decision)
     {
         var position = decision.Get<Position>("position");
-        var marketPrice = await GetMarketPriceAsync(symbol);
-        var feeRate = await GetFeeRateAsync(symbol);
-        await PositionManagement.LiquidatePositionAsync(candle, position, marketPrice, feeRate);
+        var marketPrice = await GetMarketPriceAsync(Symbol!);
+        await ClosePositionAtPriceAsync(position, marketPrice);
     }
 
-    private async Task HandleUpdatePositionDecisionAsync(Candle candle, StrategyDecision decision, string symbol)
+    private async Task HandleUpdatePositionDecisionAsync(StrategyDecision decision)
     {
         var configureNewPosition = decision.Get<Action<Position>>("configureNewPosition");
-        await PositionManagement.UpdatePositionAsync(candle, symbol, configureNewPosition);
+        await PositionManagement.UpdatePositionAsync(CurrentCandle, Symbol!, configureNewPosition);
     }
 
-    private async Task HandleCancelOrdersDecisionAsync(Candle candle, StrategyDecision decision, string symbol)
+    private async Task HandleCancelOrdersDecisionAsync(StrategyDecision decision)
     {
         var orders = decision.Get<IEnumerable<Order>>("orders");
 
         foreach (var order in orders) 
         {
-            await OrderManagement.CancelOrderAsync(candle, order.ID);
+            await OrderManagement.CancelOrderAsync(CurrentCandle, order.ID);
         }
     }
 
-    private async Task HandleGoShortDecisionAsync(Candle candle, StrategyDecision decision, string symbol)
+    private async Task HandleGoShortDecisionAsync(StrategyDecision decision)
     {
         var order = decision.Get<Order>("order");
-        var marketPrice = await GetMarketPriceAsync(symbol);
-        var feeRate = await GetFeeRateAsync(symbol);
+        var marketPrice = await GetMarketPriceAsync(Symbol!);
 
         if (order.Type == OrderType.Market)
         {
-            await OrderManagement.PlaceMarketOrderAsync(candle, order, marketPrice, feeRate);
+            await PlaceMarketOrderAsync(order, marketPrice);
         }
         else
         {
-            await OrderManagement.PlaceOrderAsync(candle, order);
+            await PlaceOrderAsync(order);
         }
     }
 
-    private async Task HandleGoLongDecisionAsync(Candle candle, StrategyDecision decision, string symbol)
+    private async Task HandleGoLongDecisionAsync(StrategyDecision decision)
     {
         var order = decision.Get<Order>("order");
-        var marketPrice = await GetMarketPriceAsync(symbol);
-        var feeRate = await GetFeeRateAsync(symbol);
+        var marketPrice = await GetMarketPriceAsync(Symbol!);
 
         if (order.Type == OrderType.Market)
         {
-            await OrderManagement.PlaceMarketOrderAsync(candle, order, marketPrice, feeRate);
+            await PlaceMarketOrderAsync(order, marketPrice);
         }
         else
         {
-            await OrderManagement.PlaceOrderAsync(candle, order);
+            await PlaceOrderAsync(order);
         }
     }
 

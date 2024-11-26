@@ -2,7 +2,6 @@
 
 public class BacktestCashManagement 
 {
-    private IEventSystem EventSystem { get; }
     private double InitialCash { get; set; }
     private ConcurrentDictionary<DateTime, double> CashHistory { get; } = new ConcurrentDictionary<DateTime, double>(DateTimeEqualityComparer.Use());
     private Dictionary<DateTime, double> OrderedCash => new(CashHistory.OrderBy(kvp => kvp.Key));
@@ -16,6 +15,7 @@ public class BacktestCashManagement
     public void InitializeCash(double initCash)
     {
         InitialCash = initCash;
+        AddCash(new Candle() { Timestamp = DateTime.MinValue }, initCash);
     }
 
     #endregion Initialize
@@ -33,8 +33,13 @@ public class BacktestCashManagement
 
     public void AddCash(Candle candle, double relative)
     {
-        CashHistory.TryAdd(candle.Timestamp, relative);
-        EventSystem.Publish<OnCashChangedEventArgs>(EventType.OnCashChanged, new OnCashChangedEventArgs(candle, Margin));
+        if (Margin + relative < 0) throw new InvalidOperationException($"transaction ({relative}) not allowed, insufficient margin ({Margin}).");
+        var newMargin = Margin + relative;
+        if (!CashHistory.TryAdd(candle.Timestamp, newMargin))
+        {
+            //throw new InvalidOperationException($"unable to add new cash for candle {candle}.");
+            CashHistory.AddOrUpdate(candle.Timestamp, relative, (ts, prev) => prev + relative);
+        };
     }
 
     #endregion Add
