@@ -1,21 +1,28 @@
 ﻿namespace Trading.Backtesting;
 public class BacktestEngineCandleState
 {
-    public DateTime Timestamp {  get; set; }
+    public Candle Candle {  get; set; }
 
     [ConvertStringEnum]
     public StrategyDecisionType Decision { get; set; }
     public ExchangeState? ExchangeState { get; set; }
+    public IEnumerable<Position> ClosedPositions { get; set; }
     public BacktestEngineCandleStateError? Error { get; set; }
 
 
-    internal static BacktestEngineCandleState Create(Candle candle, StrategyDecision decision, ExchangeState exchangeState)
+    internal static BacktestEngineCandleState Create(Candle candle, StrategyDecision decision, ExchangeState exchangeState, IEnumerable<Position> closedPositions)
     {
+        if (exchangeState.ClosedPosition != null)
+        {
+            closedPositions = closedPositions.Concat([exchangeState.ClosedPosition]);
+        }
+
         return new BacktestEngineCandleState()
         {
-            Timestamp = candle.Timestamp,
+            Candle = candle,
             Decision = decision.Type,
-            ExchangeState = exchangeState
+            ExchangeState = exchangeState,
+            ClosedPositions = closedPositions,
         };
     }
 
@@ -23,7 +30,7 @@ public class BacktestEngineCandleState
     {
         return new BacktestEngineCandleState()
         {
-            Timestamp = candle.Timestamp,
+            Candle = candle,
             Error = new BacktestEngineCandleStateError()
             {
                 Message = ex.Message,

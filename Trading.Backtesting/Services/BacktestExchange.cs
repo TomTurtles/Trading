@@ -175,14 +175,14 @@ public class BacktestExchange : IExchange
         Logger?.LogDebug("position updated: {position}", position);
     }
 
-    public async Task ClosePositionAtPriceAsync(string symbol, double price)
+    public async Task<Position?> ClosePositionAtPriceAsync(string symbol, double price)
     {
         var position = await GetPositionAsync(symbol);
-        if (position == null) return;
-        await ClosePositionAtPriceAsync(position, price);
+        if (position == null) return null;
+        return await ClosePositionAtPriceAsync(position, price);
     }
 
-    public async Task ClosePositionAtPriceAsync(Position position, double price)
+    public async Task<Position?> ClosePositionAtPriceAsync(Position position, double price)
     {
         var feeRate = await GetFeeRateAsync(position.Symbol);
         var liquidatedPosition = await PositionManagement.LiquidatePositionAsync(CurrentCandle, position, price, feeRate);
@@ -195,6 +195,8 @@ public class BacktestExchange : IExchange
             CashManagement.AddCash(CurrentCandle, value);
             Logger?.LogDebug("cash now: {cash}", await CashManagement.GetMarginAsync());
         }
+
+        return liquidatedPosition.Copy();
     }
 
     #endregion Positions
@@ -209,12 +211,14 @@ public class BacktestExchange : IExchange
     /// </summary>
     /// <param name="candle"></param>
     /// <exception cref="NotImplementedException"></exception>
-    internal async void HandleNewCandle(Candle candle, string symbol)
+    internal async Task<IEnumerable<Position>> HandleNewCandleAsync(Candle candle, string symbol)
     {
         CurrentCandle = candle;
 
         var marketPrice = await GetMarketPriceAsync(symbol);
         var feeRate = await GetFeeRateAsync(symbol);
+
+        List<Position> closedPositions = new();
 
         // margin call?
         if (CashManagement.ShouldMarginCall())
@@ -222,7 +226,8 @@ public class BacktestExchange : IExchange
             Logger?.LogWarning("MARGIN CALL");
             while (await PositionManagement.HasCurrentOpenPositionAsync())
             {
-                await ClosePositionAtPriceAsync(symbol, marketPrice);
+                var closedPosition = await ClosePositionAtPriceAsync(symbol, marketPrice);
+                if (closedPosition is not null && closedPosition.IsClosed) closedPositions.Add(closedPosition);
             }
         }
         else
@@ -235,13 +240,15 @@ public class BacktestExchange : IExchange
                 // takeprofit
                 if (position!.TakePrice is not null && CurrentCandle.PriceHit(position!.TakePrice!.Value))
                 {
-                    await ClosePositionAtPriceAsync(symbol, position!.TakePrice!.Value);
+                    var closedPosition = await ClosePositionAtPriceAsync(symbol, position!.TakePrice!.Value); 
+                    if (closedPosition is not null && closedPosition.IsClosed) closedPositions.Add(closedPosition);
                 }
 
                 // stoploss
                 if (position!.StopPrice is not null && CurrentCandle.PriceHit(position!.StopPrice!.Value))
                 {
-                    await ClosePositionAtPriceAsync(symbol, position!.StopPrice!.Value);
+                    var closedPosition = await ClosePositionAtPriceAsync(symbol, position!.StopPrice!.Value);
+                    if (closedPosition is not null && closedPosition.IsClosed) closedPositions.Add(closedPosition);
                 }
             }
 
@@ -261,7 +268,7 @@ public class BacktestExchange : IExchange
                     if (!CashManagement.CanAfford(cost))
                     {
                         Logger?.LogWarning("insufficient cash ({cash}), cannot afford order: {order}", await CashManagement.GetMarginAsync(), order);
-                        return;
+                        return closedPositions;
                     }
 
                     order.SetExecuted(executionTime, executionPrice, feeRate);
@@ -275,6 +282,8 @@ public class BacktestExchange : IExchange
                 }
             }
         }
+
+        return closedPositions;
     }
 
     /// <summary> 
@@ -283,6 +292,8 @@ public class BacktestExchange : IExchange
     /// <exception cref="NotImplementedException"></exception>
     internal async Task<ExchangeState> HandleNewDecisionAsync(StrategyDecision decision)
     {
+        Position? closedPosition = null;
+
         switch (decision.Type)
         {
             case StrategyDecisionType.GoLong:
@@ -298,7 +309,7 @@ public class BacktestExchange : IExchange
                 await HandleUpdatePositionDecisionAsync(decision);
                 break;
             case StrategyDecisionType.ClosePosition:
-                await HandleClosePositionDecisionAsync(decision);
+                closedPosition = await HandleClosePositionDecisionAsync(decision);
                 break;
 
             case StrategyDecisionType.Error:
@@ -315,16 +326,17 @@ public class BacktestExchange : IExchange
                 await GetMarginAsync(),
                 await GetPendingOrdersAsync(),
                 await GetOpenPositionAsync(Symbol!),
+                closedPosition,
                 await GetMarketPriceAsync(Symbol!),
                 await GetEquityAsync()
             );
     }
 
-    private async Task HandleClosePositionDecisionAsync(StrategyDecision decision)
+    private async Task<Position?> HandleClosePositionDecisionAsync(StrategyDecision decision)
     {
         var position = decision.Get<Position>("position");
         var marketPrice = await GetMarketPriceAsync(Symbol!);
-        await ClosePositionAtPriceAsync(position, marketPrice);
+        return await ClosePositionAtPriceAsync(position, marketPrice);
     }
 
     private async Task HandleUpdatePositionDecisionAsync(StrategyDecision decision)

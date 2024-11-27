@@ -28,8 +28,8 @@ public interface IExchange
     Task<IEnumerable<Position>> GetPositionsAsync();
     Task<Position?> GetPositionAsync(string symbol);
     Task UpdatePositionAsync(string id, Action<Position> configure);
-    Task ClosePositionAtPriceAsync(string symbol, double price);
-    Task ClosePositionAtPriceAsync(Position position, double price);
+    Task<Position?> ClosePositionAtPriceAsync(string symbol, double price);
+    Task<Position?> ClosePositionAtPriceAsync(Position position, double price);
 
     // others
     Task<double> GetMarginAsync();

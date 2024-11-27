@@ -45,6 +45,8 @@ public class BacktestEngine : IBacktestEngine
 
         await Exchange.ConnectAsync();
 
+        Stopwatch sw = Stopwatch.StartNew();
+
         List<BacktestEngineCandleState> states = new();
         for (int i = 0; i < runningCandles.Count; i++)
         {
@@ -55,7 +57,9 @@ public class BacktestEngine : IBacktestEngine
         }
         LogProcess(runningCandles.Count, runningCandles.Count);
 
-        return BacktestEnginePerformanceResult.FromStates(states);
+        sw.Stop();
+
+        return BacktestEnginePerformanceResult.FromStates(options, states, sw);
     }
 
     private void LogProcess(int i, int count)
@@ -71,7 +75,7 @@ public class BacktestEngine : IBacktestEngine
         try
         {
             // Exchange reacts on new candle first
-            Exchange.HandleNewCandle(candle, symbol);
+            var closedPositions = await Exchange.HandleNewCandleAsync(candle, symbol);
 
             // strategy
             var decision = await Strategy.ExecuteAsync(candle);
@@ -80,7 +84,7 @@ public class BacktestEngine : IBacktestEngine
             // Exchange reacts on strategy decision
             var exchangeState = await Exchange.HandleNewDecisionAsync(decision);
 
-            return BacktestEngineCandleState.Create(candle, decision, exchangeState);
+            return BacktestEngineCandleState.Create(candle, decision, exchangeState, closedPositions);
         }
         catch (Exception ex)
         {
