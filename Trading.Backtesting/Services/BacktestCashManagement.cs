@@ -12,10 +12,10 @@ public class BacktestCashManagement
     private double MarginCallLevel => InitialCash * MarginCallPercentage;
 
     #region Initialize
-    public void InitializeCash(double initCash)
+    public void InitializeCash(Candle candle, double initCash)
     {
         InitialCash = initCash;
-        AddCash(new Candle() { Timestamp = DateTime.MinValue }, initCash);
+        AddCash(candle, initCash);
     }
 
     #endregion Initialize
@@ -45,7 +45,12 @@ public class BacktestCashManagement
     #endregion Add
 
     #region MarginCall
-    public bool ShouldMarginCall() => Margin < MarginCallLevel;
+    public bool ShouldMarginCall(Position? position, double marketPrice)
+    {
+        if (position == null) return false;
+        var positionValue = position.GetValue(marketPrice);
+        return positionValue + Margin < MarginCallLevel;
+    }
 
     #endregion MarginCall
 }

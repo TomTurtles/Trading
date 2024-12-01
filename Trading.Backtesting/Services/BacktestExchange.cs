@@ -24,7 +24,7 @@ public class BacktestExchange : IExchange
     internal void Initialize(IEnumerable<Candle> candles, double initialCash, string symbol)
     {
         Candles = candles;
-        CashManagement.InitializeCash(initialCash);
+        CashManagement.InitializeCash(candles.ElementAt(0) ,initialCash);
         Symbol = symbol;
     }
 
@@ -67,7 +67,8 @@ public class BacktestExchange : IExchange
     public Task<double> GetFeeRateAsync(string symbol)
     {
         // Beispiel: Eine feste Gebühr 
-        return Task.FromResult(0.00001d);
+        var feeRate = 0.05d;
+        return Task.FromResult(feeRate / 100);
     }
 
     public async Task<double> CalculateFeeAsync(string symbol, double price, double quantity)
@@ -138,6 +139,9 @@ public class BacktestExchange : IExchange
     public async Task PlaceMarketOrderAsync(Order order, double executionPrice)
     {
         var feeRate = await GetFeeRateAsync(order.Symbol);
+
+        executionPrice = executionPrice.ApplySlippage();
+
         var cost = executionPrice * (feeRate + order.Quantity);
         if (!CashManagement.CanAfford(cost))
         {
@@ -151,7 +155,7 @@ public class BacktestExchange : IExchange
         var position = await PositionManagement.OpenPositionAsync(CurrentCandle, order);
         Logger?.LogDebug("position opened: {position}", position);
 
-        CashManagement.AddCash(CurrentCandle, (-1) * position.EntryPrice * position.EntryQuantity);
+        CashManagement.AddCash(CurrentCandle, (-1) * order.ExecutedPrice!.Value * order.Quantity - order.ExecutedFee!.Value);
         Logger?.LogDebug("cash now: {cash}", await CashManagement.GetMarginAsync());
     }
 
@@ -185,13 +189,17 @@ public class BacktestExchange : IExchange
     public async Task<Position?> ClosePositionAtPriceAsync(Position position, double price)
     {
         var feeRate = await GetFeeRateAsync(position.Symbol);
+        
+        price = price.ApplySlippage();
+
         var liquidatedPosition = await PositionManagement.LiquidatePositionAsync(CurrentCandle, position, price, feeRate);
 
         if (liquidatedPosition is not null && liquidatedPosition.IsClosed)
         {
             Logger?.LogDebug("position closed: {position}", liquidatedPosition);
 
-            var value = liquidatedPosition.EntryPrice * liquidatedPosition.ExitQuantity + liquidatedPosition.PNL!.Value * (1 - feeRate);
+            var qty = position.EntryQuantity - position.ExitQuantity;
+            var value = (price * qty + liquidatedPosition.PNL!.Value) * (1 - feeRate);
             CashManagement.AddCash(CurrentCandle, value);
             Logger?.LogDebug("cash now: {cash}", await CashManagement.GetMarginAsync());
         }
@@ -220,68 +228,52 @@ public class BacktestExchange : IExchange
 
         List<Position> closedPositions = new();
 
-        // margin call?
-        if (CashManagement.ShouldMarginCall())
+        if (await PositionManagement.HasCurrentOpenPositionAsync())
         {
-            Logger?.LogWarning("MARGIN CALL");
-            while (await PositionManagement.HasCurrentOpenPositionAsync())
+            // margin call?
+            if (CashManagement.ShouldMarginCall(await PositionManagement.GetPositionAsync(), marketPrice))
             {
-                var closedPosition = await ClosePositionAtPriceAsync(symbol, marketPrice);
-                if (closedPosition is not null && closedPosition.IsClosed) closedPositions.Add(closedPosition);
+                Logger?.LogWarning("MARGIN CALL");
+                while (await PositionManagement.HasCurrentOpenPositionAsync())
+                {
+                    var closedPosition = await ClosePositionAtPriceAsync(symbol, marketPrice);
+                    if (closedPosition is not null && closedPosition.IsClosed) closedPositions.Add(closedPosition);
+                }
             }
-        }
-        else
-        {
             // stoploss/takeprofit?
-            if (await PositionManagement.HasCurrentOpenPositionAsync())
+            else
             {
                 var position = await PositionManagement.GetPositionAsync();
 
                 // takeprofit
-                if (position!.TakePrice is not null && CurrentCandle.PriceHit(position!.TakePrice!.Value))
+                if (position!.TakePrice is not null && CurrentCandle.IsTakeProfitHit(position))
                 {
-                    var closedPosition = await ClosePositionAtPriceAsync(symbol, position!.TakePrice!.Value); 
+                    var closedPosition = await ClosePositionAtPriceAsync(symbol, position!.TakePrice!.Value);
                     if (closedPosition is not null && closedPosition.IsClosed) closedPositions.Add(closedPosition);
                 }
 
                 // stoploss
-                if (position!.StopPrice is not null && CurrentCandle.PriceHit(position!.StopPrice!.Value))
+                if (position!.StopPrice is not null && CurrentCandle.IsStopLossHit(position))
                 {
                     var closedPosition = await ClosePositionAtPriceAsync(symbol, position!.StopPrice!.Value);
                     if (closedPosition is not null && closedPosition.IsClosed) closedPositions.Add(closedPosition);
                 }
             }
+        }
 
-            // orders executed?
-            if (await OrderManagement.HasOpenOrdersAsync(symbol))
+        // orders executed?
+        if (await OrderManagement.HasOpenOrdersAsync(symbol))
+        {
+            var openOrders = await OrderManagement.GetOpenOrdersAsync();
+
+            var ordersToExecute = openOrders.Where(order => order.CandleHit(CurrentCandle));
+
+            foreach (var order in ordersToExecute)
             {
-                var openOrders = await OrderManagement.GetOpenOrdersAsync();
-
-                var ordersToExecute = openOrders.Where(order => order.CandleHit(CurrentCandle));
-
-                foreach (var order in ordersToExecute)
-                {
-                    var executionPrice = order.Price ?? CurrentCandle.Close;
-                    var executionTime = CurrentCandle.Timestamp;
-                    var cost = executionPrice * (feeRate + order.Quantity);
-
-                    if (!CashManagement.CanAfford(cost))
-                    {
-                        Logger?.LogWarning("insufficient cash ({cash}), cannot afford order: {order}", await CashManagement.GetMarginAsync(), order);
-                        return closedPositions;
-                    }
-
-                    order.SetExecuted(executionTime, executionPrice, feeRate);
-                    Logger?.LogDebug("order executed: {order}", order);
-
-                    var position = await PositionManagement.OpenPositionAsync(CurrentCandle, order);
-                    Logger?.LogDebug("position opened: {position}", position);
-
-                    CashManagement.AddCash(CurrentCandle, (-1) * position.EntryPrice * position.EntryQuantity);
-                    Logger?.LogDebug("cash now: {cash}", await CashManagement.GetMarginAsync());
-                }
+                await PlaceMarketOrderAsync(order, marketPrice);
             }
         }
+
 
         return closedPositions;
     }
@@ -349,7 +341,7 @@ public class BacktestExchange : IExchange
     {
         var orders = decision.Get<IEnumerable<Order>>("orders");
 
-        foreach (var order in orders) 
+        foreach (var order in orders)
         {
             await OrderManagement.CancelOrderAsync(CurrentCandle, order.ID);
         }

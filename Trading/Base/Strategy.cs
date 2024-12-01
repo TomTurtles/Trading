@@ -2,11 +2,13 @@
 
 public abstract class Strategy : IStrategy
 {
-    protected Strategy(IExchange exchange, string symbol, CandleInterval interval)
+    protected Strategy(IExchange exchange, string symbol, CandleInterval interval, double? lever, Dictionary<string, JsonElement> parameters)
     {
         Exchange = exchange;
         Symbol = symbol;
         CandleInterval = interval;
+        Lever = lever;
+        Parameters = parameters;
     }
 
     // Services
@@ -17,6 +19,8 @@ public abstract class Strategy : IStrategy
     public abstract string Name { get; }
     public string Symbol { get; }
     public CandleInterval CandleInterval { get; }
+    public double? Lever { get; }
+    public Dictionary<string, JsonElement> Parameters { get; }
 
     // Portfolio
     protected double Margin { get; private set; }
@@ -134,14 +138,14 @@ public abstract class Strategy : IStrategy
             {
                 if (await ShouldLongAsync())
                 {
-                    var order = Order.CreateLong(Symbol);
+                    var order = Order.CreateLong(Symbol, Lever);
                     await GoLongAsync(order);
                     order.CalculateType(MarketPrice);
                     return StrategyDecision.GoLong(order);
                 }
                 else if (await ShouldShortAsync())
                 {
-                    var order = Order.CreateShort(Symbol);
+                    var order = Order.CreateShort(Symbol, Lever);
                     await GoShortAsync(order);
                     order.CalculateType(MarketPrice);
                     return StrategyDecision.GoShort(order);

@@ -32,7 +32,7 @@ public static class RiskManagement
     /// <param name="precision">Die Anzahl der Dezimalstellen für die Rundung (Standard ist 8).</param>
     /// <param name="feeRate">Der Gebührensatz (Standard ist 0).</param>
     /// <returns>Die berechnete Menge.</returns>
-    public static double RiskToQty(double capital, double riskPerCapital, double entryPrice, double stopLossPrice, int precision = 8, double feeRate = 0)
+    public static double RiskToQty(double capital, double riskPerCapital, double entryPrice, double stopLossPrice, double feeRate = 0)
     {
         double riskPerQty = Math.Abs(entryPrice - stopLossPrice);
         double size = RiskToSize(capital, riskPerCapital, riskPerQty, entryPrice);
@@ -42,7 +42,7 @@ public static class RiskManagement
             size *= (1 - feeRate * 3);
         }
 
-        return SizeToQty(size, entryPrice, precision, feeRate);
+        return SizeToQty(size, entryPrice, feeRate);
     }
 
     /// <summary>
@@ -68,20 +68,20 @@ public static class RiskManagement
     }
 
     /// <summary>
-    /// Konvertiert die Positionsgröße in die Menge.
+    /// Konvertiert die gewünschte Positionsgröße in die Menge.
     /// Beispiel: Anfordern von 100€ zum Einstiegspreis von 50€ ergibt 2 Einheiten.
     /// </summary>
-    /// <param name="positionSize">Die Positionsgröße.</param>
+    /// <param name="positionSize">Die SOLL Positionsgröße.</param>
     /// <param name="entryPrice">Der Einstiegspreis.</param>
     /// <param name="precision">Die Anzahl der Dezimalstellen für die Rundung (Standard ist 3).</param>
     /// <param name="feeRate">Der Gebührensatz (Standard ist 0).</param>
     /// <returns>Die berechnete Menge.</returns>
     /// <exception cref="ArgumentException">Wird ausgelöst, wenn der Einstiegspreis null ist oder ungültige Werte vorliegen.</exception>
-    public static double SizeToQty(double positionSize, double entryPrice, int precision = 3, double feeRate = 0)
+    public static double SizeToQty(double positionSize, double entryPrice, double feeRate = 0)
     {
         if (entryPrice == 0)
         {
-            throw new ArgumentException("Der Einstiegspreis kann nicht null sein.", nameof(entryPrice));
+            throw new ArgumentException("Der Einstiegspreis kann nicht '0' sein.", nameof(entryPrice));
         }
 
         if (feeRate != 0)
@@ -89,18 +89,7 @@ public static class RiskManagement
             positionSize *= (1 - feeRate * 3);
         }
 
-        return FloorWithPrecision(positionSize / entryPrice, precision);
+        return positionSize / entryPrice;
     }
 
-    /// <summary>
-    /// Rundet einen Wert auf eine bestimmte Anzahl von Dezimalstellen ab.
-    /// </summary>
-    /// <param name="value">Der zu rundende Wert.</param>
-    /// <param name="precision">Die Anzahl der Dezimalstellen.</param>
-    /// <returns>Der abgerundete Wert.</returns>
-    private static double FloorWithPrecision(double value, int precision)
-    {
-        var factor = Math.Pow(10, precision);
-        return Math.Floor(value * (double)factor) / (double)factor;
-    }
 }

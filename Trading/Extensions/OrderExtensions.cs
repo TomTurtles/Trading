@@ -7,7 +7,7 @@ public static class OrderExtensions
         if (executionPrice <= 0) throw new InvalidOperationException($"invalid execution price '{executionPrice}'");
         order.ExecutedPrice = executionPrice;
         order.ExecutedTime = executionTime;
-        order.ExecutedFee = executionPrice * feeRate;
+        order.ExecutedFee = order.Quantity * executionPrice * feeRate;
         order.Status = OrderStatus.Filled;
     }
 

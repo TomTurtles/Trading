@@ -1,16 +1,30 @@
 ﻿namespace Trading;
 public static class CandleExtensions
 {
-    public static bool PriceHit(this Candle candle, double price)
+    public static bool IsTakeProfitHit(this Candle candle, Position? position)
     {
-        return candle.LowHit(price) && candle.HighHit(price);
+        if (position?.TakePrice is null) return false;
+
+        if (position.Side == PositionSide.Long)
+        {
+            return position.TakePrice.Value <= candle.High;
+        }
+        else
+        {
+            return position.TakePrice.Value >= candle.Low;
+        }
     }
-    public static bool LowHit(this Candle candle, double price)
+    public static bool IsStopLossHit(this Candle candle, Position? position)
     {
-        return candle.Low <= price;
-    }
-    public static bool HighHit(this Candle candle, double price)
-    {
-        return candle.High >= price;
+        if (position?.StopPrice is null) return false;
+
+        if (position.Side == PositionSide.Long)
+        {
+            return position.StopPrice.Value >= candle.Low;
+        }
+        else
+        {
+            return position.StopPrice.Value <= candle.High;
+        }
     }
 }

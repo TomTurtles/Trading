@@ -9,4 +9,5 @@ public enum StrategyDecisionType
     UpdatePosition,
     ClosePosition,
     Error,
+    Start,
 }

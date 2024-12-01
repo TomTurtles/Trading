@@ -47,7 +47,18 @@ public class BacktestEngine : IBacktestEngine
 
         Stopwatch sw = Stopwatch.StartNew();
 
-        List<BacktestEngineCandleState> states = new();
+        // with first initial state
+        List<BacktestEngineCandleState> states = new() 
+        { 
+            new BacktestEngineCandleState() 
+            { 
+                Candle = dataFeedCandles.Last(c => c.Timestamp < startAt ),  
+                ExchangeState = ExchangeState.Create(options.InitialCash, [], null, null, 0, options.InitialCash),
+                ClosedPositions = [],
+                Decision = StrategyDecisionType.Start,
+            } 
+        };
+
         for (int i = 0; i < runningCandles.Count; i++)
         {
             Candle? candle = runningCandles[i];
@@ -59,7 +70,7 @@ public class BacktestEngine : IBacktestEngine
 
         sw.Stop();
 
-        return BacktestEnginePerformanceResult.FromStates(options, states, sw);
+        return BacktestEnginePerformanceResult.FromStates(Strategy.Name, options, states, sw);
     }
 
     private void LogProcess(int i, int count)

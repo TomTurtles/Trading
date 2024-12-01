@@ -15,7 +15,6 @@ public class Position
     [ConvertStringEnum]
     public PositionSide Side { get; init; }
 
-
     public double? StopPrice { get; set; }
     public double? TakePrice { get; set; }
 
@@ -32,6 +31,11 @@ public class Position
     public double EntryQuantity => EntryOrders.Sum(o => o.Quantity);
     public double ExitQuantity => ExitOrders.Sum(o => o.Quantity);
     public double Quantity => EntryQuantity - ExitQuantity;
+
+    /// <summary>
+    /// Depending on Executed Orders, all orders must share the same lever
+    /// </summary>
+    public double Lever => ExecutedOrders.First().Lever;
 
     /// <summary>
     /// Last Entry Order Execution Time
@@ -61,7 +65,7 @@ public class Position
     /// <summary>
     /// PNL
     /// </summary>
-    public double? PNL => ExitOrders.Any() ? (Side == PositionSide.Long ? ExitPrice - EntryPrice : EntryPrice - ExitPrice) * ExitQuantity : null;
+    public double? PNL => ExitOrders.Any() ? (Side == PositionSide.Long ? ExitPrice - EntryPrice : EntryPrice - ExitPrice) * ExitQuantity * Lever : null;
 
 
     #region Orders
@@ -101,6 +105,7 @@ public class Position
         if (order.ExecutedPrice is null) throw new InvalidOperationException($"{nameof(order.ExecutedPrice)} is null");
         if (order.ExecutedFee is null) throw new InvalidOperationException($"{nameof(order.ExecutedFee)} is null");
         if (order.Quantity <= 0) throw new InvalidOperationException($"invalid quantity: '{order.Quantity}'");
+        if (ExecutedOrders.Any() && order.Lever != ExecutedOrders.First().Lever) throw new InvalidOperationException($"order with lever '{ExecutedOrders.First().Lever}' already added. New lever '{order.Lever}' not allowed.");
 
         ExecutedOrders.Add(order);
     }
@@ -116,7 +121,7 @@ public class Position
         if (ExitPrice is not null)
         {
             sb.AppendLine($"Exit: ({ExitPrice}) at {ExitTime}");
-            sb.AppendLine($"PNL: {PNL}");
+            sb.AppendLine($"PNL: {PNL} (leverage: {Lever})");
             sb.AppendLine($"Fee: {Fee}");
         }
 

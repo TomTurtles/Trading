@@ -1,19 +1,19 @@
 ﻿namespace Trading.Backtesting;
 public class BacktestEnginePerformanceResult
 {
-    public BacktestPerformanceResult Backtest { get; private set; }
     public IndicatorsPerformanceResult Indicators { get; private set; }
+    public BacktestPerformanceResult Backtest { get; private set; }
+    public EquityPerformanceResult Equity { get; private set; }
     public AssetPerformanceResult Asset { get; private set; }
     public CashPerformanceResult Cash { get; private set; }
-    public EquityPerformanceResult Equity { get; private set; }
     public IEnumerable<BacktestEngineCandleStateError> Errors { get; private set; }
 
-    internal static BacktestEnginePerformanceResult FromStates(BacktestOptions options, IEnumerable<BacktestEngineCandleState> states, Stopwatch sw)
+    internal static BacktestEnginePerformanceResult FromStates(string name, BacktestOptions options, IEnumerable<BacktestEngineCandleState> states, Stopwatch sw)
     {
         return new()
         {
             Indicators = new IndicatorsPerformanceResult(states),
-            Backtest = new BacktestPerformanceResult(options, states, sw),
+            Backtest = new BacktestPerformanceResult(name, options, states, sw),
             Asset = new AssetPerformanceResult(states.Where(s => s.ExchangeState != null).Select(s => s.Candle.Close)),
             Cash = new CashPerformanceResult(states.Where(s => s.ExchangeState != null).Select(s => s.ExchangeState!.Cash)),
             Equity = new EquityPerformanceResult(states.Where(s => s.ExchangeState != null).Select(s => s.ExchangeState!.Equity)),
@@ -23,7 +23,8 @@ public class BacktestEnginePerformanceResult
 
     public class IndicatorsPerformanceResult(IEnumerable<BacktestEngineCandleState> states)
     {
-        public string MaxDrawdown
+        public int Trades => states.Sum(state => state.ClosedPositions?.Count() ?? 0);
+        public double MaxDrawdown
         {
             get
             {
@@ -39,33 +40,36 @@ public class BacktestEnginePerformanceResult
                     if (drawdown > maxDrawdown) maxDrawdown = drawdown;
                 }
 
-                return $"{-maxDrawdown:0.00%}";
+                return Math.Round(-maxDrawdown * 100, 2);
             }
         }
 
-        public string WinRate 
+        public double WinRate 
         { 
             get
             {
                 var closedPositions = states.SelectMany(state => state.ClosedPositions);
-                if (!closedPositions.Any()) return $"{0:0.00%}";
+                if (!closedPositions.Any()) Math.Round(0d, 2);
 
                 var winRate = (double)closedPositions.Count(cp => cp.PNL is not null && cp.PNL > 0d) / closedPositions.Count();
-                return $"{winRate:0.00%}";
+                return Math.Round(winRate * 100, 2);
             }
         }
 
-        public string AvgWinToAvgLoss
+        public double AvgWin => Math.Round(states.SelectMany(state => state.ClosedPositions).Where(cp => cp.PNL > 0).Average(cp => cp.PNL) ?? 0, 2);
+        public double AvgLoss => Math.Round(states.SelectMany(state => state.ClosedPositions).Where(cp => cp.PNL <= 0).Average(cp => cp.PNL) ?? 0, 2);
+
+        public double ExcessReturnRatio
         {
             get
             {
-                var closedPositions = states.SelectMany(state => state.ClosedPositions);
-                if (!closedPositions.Any()) return $"{0:0.00%}";
+                var priceList = states.Select(s => s.Candle.Close);
+                var equityList = states.Where(s => s.ExchangeState != null).Select(s => s.ExchangeState!.Equity);
 
-                var avgWin = closedPositions.Where(cp => cp.PNL > 0).Average(cp => cp.PNL);
-                var avgLoss = closedPositions.Where(cp => cp.PNL <= 0).Average(cp => cp.PNL);
+                var priceRatio = priceList.Last() / priceList.First();
+                var equityRatio = equityList.Last() / equityList.First();
 
-                return $"{avgWin:0.00} / {avgLoss:0.00}";
+                return Math.Round(equityRatio / priceRatio, 2);
             }
         }
     }
@@ -79,8 +83,9 @@ public class BacktestEnginePerformanceResult
         public string Performance => ((End - Start) / Start).ToString("0.00%");
     }
 
-    public class BacktestPerformanceResult(BacktestOptions options, IEnumerable<BacktestEngineCandleState> states, Stopwatch sw)
+    public class BacktestPerformanceResult(string name, BacktestOptions options, IEnumerable<BacktestEngineCandleState> states, Stopwatch sw)
     {
+        public string Strategy => name;
         public int Candles => states.Count();
         public string Symbol => options.Symbol;
 

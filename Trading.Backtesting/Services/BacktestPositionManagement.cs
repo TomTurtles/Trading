@@ -56,23 +56,25 @@ public class BacktestPositionManagement
     /// <returns></returns>
     public async Task<Position> UpdatePositionAsync(Candle candle, Position position, Order order)
     {
-        AddToHistory(candle, position.Copy());
         Action<Position> configure = (p) => p.AddExecutedOrder(order);
         return await UpdatePositionAsync(candle, position, configure);
     }
 
     private Task<Position> UpdatePositionAsync(Candle candle, Position position, Action<Position> configure)
     {
-        AddToHistory(candle, position.Copy());
-        configure(position);
+        AddToHistory(candle, position);
 
+        var positionToUpdate = position.Copy();
+        configure(positionToUpdate);
+
+        CurrentPosition = positionToUpdate;
         if (CurrentPosition?.IsClosed ?? false)
         {
             AddToHistory(candle, CurrentPosition);
             CurrentPosition = null;
         }
 
-        return Task.FromResult(position);
+        return Task.FromResult(positionToUpdate);
     }
 
 
@@ -80,23 +82,23 @@ public class BacktestPositionManagement
 
     #region Liquidation
 
-    public async Task<Position?> TryLiquidatePositionAsync(Candle candle, double executionPrice, double executionFee)
+    public async Task<Position?> TryLiquidatePositionAsync(Candle candle, double executionPrice, double feeRate)
     {
         var position = await GetPositionAsync();
         if (position == null) return position;
-        return await LiquidatePositionAsync(candle, position, executionPrice, executionFee);
+        return await LiquidatePositionAsync(candle, position, executionPrice, feeRate);
     }
 
-    public async Task<Position?> LiquidatePositionAsync(Candle candle, Position position, double executionPrice, double executionFee)
+    public async Task<Position?> LiquidatePositionAsync(Candle candle, Position position, double executionPrice, double feeRate)
     {
         if (position.IsClosed) throw new Exception("position is already closed");
 
-        var order = Order.Create(position.Symbol, position.Side.ToOppositeOrderSide());
+        var order = Order.Create(position.Symbol, position.Side.ToOppositeOrderSide(), position.Lever);
 
         order.Quantity = position.Quantity;
         order.Status = OrderStatus.Filled;
         order.ExecutedPrice = executionPrice;
-        order.ExecutedFee = executionFee;
+        order.ExecutedFee = order.Quantity * executionPrice * feeRate;
         order.ExecutedTime = candle.Timestamp;
 
         order.CalculateType(executionPrice);
