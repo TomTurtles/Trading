@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<LangVersion>13</LangVersion>
+		<TargetFramework>netstandard2.1</TargetFramework>
+		<Description>Trade everything</Description>
+		<Version>0.0.2</Version>
+		<Authors>Tom-Oliver Marek</Authors>
+		<IsPackable>true</IsPackable>
+		<PackageId>Marek.Trading</PackageId>
+		<PackageOutputPath>C:\Users\tom-o\source\nugets</PackageOutputPath>
+		<PackageTags>Trading</PackageTags>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<RepositoryUrl></RepositoryUrl>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Marek.Trading.Backtesting\Marek.Trading.Backtesting.csproj"></ProjectReference>
+		<ProjectReference Include="..\Marek.Trading.Core\Marek.Trading.Core.csproj"></ProjectReference>
+		<ProjectReference Include="..\Marek.Trading.Live\Marek.Trading.Live.csproj"></ProjectReference>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Services\" />
+	</ItemGroup>
+
+</Project>
