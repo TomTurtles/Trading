@@ -1,4 +1,5 @@
-﻿namespace Marek.Trading.Tests;
+﻿
+namespace Marek.Trading.Tests;
 
 [TestClass]
 public sealed class _03_BacktestingTests_Cash
@@ -18,25 +19,28 @@ public sealed class _03_BacktestingTests_Cash
         var order = Order.CreateLong("BTC_USDT");
         order.Quantity = 3;
 
-        // Act
+        // Market Order
         await exchange.PlaceOrderAsync(order);
 
         // Assert
+        Assert.AreEqual(candle.Close, order.ExecutedPrice);
+        Assert.AreEqual(candle.Timestamp, order.ExecutedTime);
+
+        var positionManagement = _serviceProvider.GetService<IBacktestingPositionManagement>();
+        Assert.IsNotNull(positionManagement);
+
         var cashManagement = _serviceProvider.GetService<IBacktestingCashManagement>();
         Assert.IsNotNull(cashManagement);
+
+        var cashList = cashManagement.GetCashStateList();
+        Assert.IsTrue(cashList.Any());
 
         var options = _serviceProvider.GetService<IOptions<BacktestingOptions>>();
         Assert.IsNotNull(options);
 
         var margin = await cashManagement.GetMarginAsync();
-        Assert.AreNotEqual(options.Value.InitialCash, margin);
-        Assert.IsTrue(options.Value.InitialCash > margin);
-        Assert.AreEqual(candle.Close, order.ExecutedPrice);
-        Assert.AreEqual(candle.Timestamp, order.ExecutedTime);
-        Assert.IsTrue(options.Value.InitialCash.IsPriceNear(margin + (candle.Close * order.Quantity) + order.ExecutedFee, 0.0001));
-
-        var cashList = await cashManagement.GetCashList();
-        Assert.IsTrue(cashList.Any());
+        var expectedMargin = options.Value.InitialCash - order.GetValue() - order.ExecutedFee;
+        Assert.AreEqual(Math.Round(expectedMargin!.Value, 6), Math.Round(margin, 6));
     }
 
     [TestMethod]
@@ -56,21 +60,24 @@ public sealed class _03_BacktestingTests_Cash
         await exchange.PlaceOrderAsync(order);
 
         // Assert
+        Assert.AreEqual(candle.Close, order.ExecutedPrice);
+        Assert.AreEqual(candle.Timestamp, order.ExecutedTime);
+
+        var positionManagement = _serviceProvider.GetService<IBacktestingPositionManagement>();
+        Assert.IsNotNull(positionManagement);
+
         var cashManagement = _serviceProvider.GetService<IBacktestingCashManagement>();
         Assert.IsNotNull(cashManagement);
+
+        var cashList = cashManagement.GetCashStateList();
+        Assert.IsTrue(cashList.Any());
 
         var options = _serviceProvider.GetService<IOptions<BacktestingOptions>>();
         Assert.IsNotNull(options);
 
         var margin = await cashManagement.GetMarginAsync();
-        Assert.AreNotEqual(options.Value.InitialCash, margin);
-        Assert.IsTrue(options.Value.InitialCash > margin);
-        Assert.AreEqual(candle.Close, order.ExecutedPrice);
-        Assert.AreEqual(candle.Timestamp, order.ExecutedTime);
-        Assert.IsTrue(options.Value.InitialCash.IsPriceNear(margin + (candle.Close * order.Quantity) + order.ExecutedFee, 0.0001));
-
-        var cashList = await cashManagement.GetCashList();
-        Assert.IsTrue(cashList.Any());
+        var expectedMargin = options.Value.InitialCash - order.GetValue() - order.ExecutedFee;
+        Assert.AreEqual(Math.Round(expectedMargin!.Value, 6), Math.Round(margin, 6));
     }
 
     [TestMethod]
@@ -97,14 +104,12 @@ public sealed class _03_BacktestingTests_Cash
         var options = _serviceProvider.GetService<IOptions<BacktestingOptions>>();
         Assert.IsNotNull(options);
 
-        var margin = await cashManagement.GetMarginAsync();
-        Assert.AreNotEqual(options.Value.InitialCash, margin);
-        Assert.IsTrue(options.Value.InitialCash > margin);
-        Assert.AreNotEqual(options.Value.InitialCash, margin + (candle.Close * order.Quantity));
-        Assert.AreEqual(options.Value.InitialCash, margin + (order.Price * order.Quantity));
-
-        var cashList = await cashManagement.GetCashList();
+        var cashList = cashManagement.GetCashStateList();
         Assert.IsTrue(cashList.Any());
+
+        var margin = await cashManagement.GetMarginAsync();
+        var expectedMargin = options.Value.InitialCash - order.GetValue();
+        Assert.AreEqual(Math.Round(expectedMargin, 8), Math.Round(margin, 8));
     }
 
     [TestMethod]
@@ -131,14 +136,12 @@ public sealed class _03_BacktestingTests_Cash
         var options = _serviceProvider.GetService<IOptions<BacktestingOptions>>();
         Assert.IsNotNull(options);
 
-        var margin = await cashManagement.GetMarginAsync();
-        Assert.AreNotEqual(options.Value.InitialCash, margin);
-        Assert.IsTrue(options.Value.InitialCash > margin);
-        Assert.AreNotEqual(options.Value.InitialCash, margin + (candle.Close * order.Quantity));
-        Assert.AreEqual(options.Value.InitialCash, margin + (order.Price * order.Quantity));
-
-        var cashList = await cashManagement.GetCashList();
+        var cashList = cashManagement.GetCashStateList();
         Assert.IsTrue(cashList.Any());
+
+        var margin = await cashManagement.GetMarginAsync();
+        var expectedMargin = options.Value.InitialCash - order.GetValue();
+        Assert.AreEqual(Math.Round(expectedMargin, 8), Math.Round(margin, 8));
     }
 
 
@@ -161,9 +164,9 @@ public sealed class _03_BacktestingTests_Cash
 
         // Limit Order
         var order = Order.CreateLong("BTC_USDT");
-        order.Quantity = (new Random().NextDouble() + 1) * 4;
+        order.Quantity = 1;
         order.Price = 3.5;
-        order.Lever = (new Random().NextDouble() + 1) * 4;
+        order.Lever = 1;
         await exchange.PlaceOrderAsync(order);
 
         // Run Candles
@@ -189,25 +192,25 @@ public sealed class _03_BacktestingTests_Cash
         var positions = await positionManagement.GetPositionsAsync();
         Assert.AreEqual(1, positions.Count);
 
-        // Assert Cash
+        // Assert
         var cashManagement = _serviceProvider.GetService<IBacktestingCashManagement>();
         Assert.IsNotNull(cashManagement);
 
         var options = _serviceProvider.GetService<IOptions<BacktestingOptions>>();
         Assert.IsNotNull(options);
 
-        var margin = await cashManagement.GetMarginAsync();
-        Assert.AreNotEqual(options.Value.InitialCash, margin);
-        Assert.IsTrue(margin > options.Value.InitialCash);
-
-        var cashList = await cashManagement.GetCashList();
+        var cashList = cashManagement.GetCashStateList();
         Assert.IsTrue(cashList.Any());
-        Assert.AreEqual(options.Value.InitialCash, cashList[0]);
-        Assert.IsTrue(cashList[0] > cashList[1]); // create position
-        Assert.IsTrue(cashList[2] < cashList[1]); // fee
-        Assert.IsTrue(cashList[2] < cashList[3]); // sell position
-        Assert.IsTrue(options.Value.InitialCash < cashList[3]); // sell position with win
+
+        // Keine Pending Orders mehr vorhanden, keine offenen Positionen mehr vorhanden
+        // In diesem Fall muss Equity = Cash sein
+        var equity = await exchange.GetEquityAsync();
+        var margin = await cashManagement.GetMarginAsync();
+        var expectedMargin = options.Value.InitialCash + positions.Sum(p => p.RealizedPNL) - positions.Sum(p => p.Fee);
+        Assert.AreEqual(Math.Round(equity, 8), Math.Round(margin, 8));
+        Assert.AreEqual(Math.Round(expectedMargin, 8), Math.Round(margin, 8));
     }
+
 
     [TestMethod]
     public async Task _06_ClosePositionMarketOrder_Short_CashManagement_ShouldWorkAsync()
@@ -240,23 +243,16 @@ public sealed class _03_BacktestingTests_Cash
             await exchange.RunAsync();
         }
 
-        // Closing Market Order
-        var closingOrder = Order.CreateLong("BTC_USDT");
-        closingOrder.Quantity = order.Quantity;
-        closingOrder.Lever = order.Lever;
-        await exchange.PlaceOrderAsync(closingOrder);
-
-        // Assert Position
+        // Assert first Limit Order
         var positionManagement = _serviceProvider.GetService<IBacktestingPositionManagement>();
         Assert.IsNotNull(positionManagement);
 
         var openPosition = await positionManagement.GetOpenPositionAsync();
-        Assert.IsNull(openPosition);
+        Assert.IsNotNull(openPosition);
 
         var positions = await positionManagement.GetPositionsAsync();
         Assert.AreEqual(1, positions.Count);
 
-        // Assert Cash
         var cashManagement = _serviceProvider.GetService<IBacktestingCashManagement>();
         Assert.IsNotNull(cashManagement);
 
@@ -264,16 +260,29 @@ public sealed class _03_BacktestingTests_Cash
         Assert.IsNotNull(options);
 
         var margin = await cashManagement.GetMarginAsync();
-        Assert.AreNotEqual(options.Value.InitialCash, margin);
-        Assert.IsTrue(margin > options.Value.InitialCash);
+        var expectedCashAfterFirstExecutedOrder = options.Value.InitialCash - order.GetValue() - order.ExecutedFee;
+        Assert.AreEqual(expectedCashAfterFirstExecutedOrder, margin);
 
-        var cashList = await cashManagement.GetCashList();
-        Assert.IsTrue(cashList.Any());
-        Assert.AreEqual(options.Value.InitialCash, cashList[0]);
-        Assert.IsTrue(cashList[0] > cashList[1]); // create position
-        Assert.IsTrue(cashList[2] < cashList[1]); // fee
-        Assert.IsTrue(cashList[2] < cashList[3]); // sell position
-        Assert.IsTrue(options.Value.InitialCash < cashList[3]); // sell position with win
+        // Closing Market Order
+        var closingOrder = Order.CreateLong("BTC_USDT");
+        closingOrder.Quantity = order.Quantity;
+        closingOrder.Lever = order.Lever;
+        await exchange.PlaceOrderAsync(closingOrder);
+
+        // Assert Position after Market Order
+        openPosition = await positionManagement.GetOpenPositionAsync();
+        Assert.IsNull(openPosition);
+
+        positions = await positionManagement.GetPositionsAsync();
+        Assert.AreEqual(1, positions.Count);
+
+        // Keine Pending Orders mehr vorhanden, keine offenen Positionen mehr vorhanden
+        // In diesem Fall muss Equity = Cash sein
+        var equity = await exchange.GetEquityAsync();
+        margin = await cashManagement.GetMarginAsync();
+        var expectedMargin = options.Value.InitialCash + positions.Sum(p => p.RealizedPNL) - positions.Sum(p => p.Fee);
+        Assert.AreEqual(Math.Round(equity, 8), Math.Round(margin, 8));
+        Assert.AreEqual(Math.Round(expectedMargin, 8), Math.Round(margin, 8));
     }
 
     [TestMethod]
@@ -330,12 +339,13 @@ public sealed class _03_BacktestingTests_Cash
         var options = _serviceProvider.GetService<IOptions<BacktestingOptions>>();
         Assert.IsNotNull(options);
 
+        // Keine Pending Orders mehr vorhanden, keine offenen Positionen mehr vorhanden
+        // In diesem Fall muss Equity = Cash sein
+        var equity = await exchange.GetEquityAsync();
         var margin = await cashManagement.GetMarginAsync();
-        Assert.AreNotEqual(options.Value.InitialCash, margin);
-        Assert.IsTrue(margin < options.Value.InitialCash);
-
-        var cashList = await cashManagement.GetCashList();
-        Assert.IsTrue(cashList.Any());
+        var expectedMargin = options.Value.InitialCash + positions.Sum(p => p.RealizedPNL) - positions.Sum(p => p.Fee);
+        Assert.AreEqual(Math.Round(equity, 8), Math.Round(margin, 8));
+        Assert.AreEqual(Math.Round(expectedMargin, 8), Math.Round(margin, 8));
     }
 
     [TestMethod]
@@ -392,12 +402,13 @@ public sealed class _03_BacktestingTests_Cash
         var options = _serviceProvider.GetService<IOptions<BacktestingOptions>>();
         Assert.IsNotNull(options);
 
+        // Keine Pending Orders mehr vorhanden, keine offenen Positionen mehr vorhanden
+        // In diesem Fall muss Equity = Cash sein
+        var equity = await exchange.GetEquityAsync();
         var margin = await cashManagement.GetMarginAsync();
-        Assert.AreNotEqual(options.Value.InitialCash, margin);
-        Assert.IsTrue(margin < options.Value.InitialCash);
-
-        var cashList = await cashManagement.GetCashList();
-        Assert.IsTrue(cashList.Any());
+        var expectedMargin = options.Value.InitialCash + positions.Sum(p => p.RealizedPNL) - positions.Sum(p => p.Fee);
+        Assert.AreEqual(Math.Round(equity, 8), Math.Round(margin, 8));
+        Assert.AreEqual(Math.Round(expectedMargin, 8), Math.Round(margin, 8));
     }
 }
 

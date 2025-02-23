@@ -3,7 +3,8 @@
 public interface IBacktestingCashManagement
 {
     Task<double> GetMarginAsync(CancellationToken cancellationToken = default);
-    Task<List<double>> GetCashList(CancellationToken cancellationToken = default);
+    Dictionary<DateTime, BacktestingCashState> GetHistory();
+    List<BacktestingCashState> GetCashStateList();
     bool CanAfford(double cost);
-    void AddCash(DateTime timestamp, double relative);
+    void AddCash(BacktestingCashTransaction cashTransaction);
 }

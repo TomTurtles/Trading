@@ -2,5 +2,5 @@
 
 public interface IBacktestingDataFeed
 {
-    Task<List<Candle>> GetCandlesAsync(CancellationToken cancellationToken = default);
+    Task<DataFeedLoadCandlesResult> LoadCandlesAsync(CancellationToken cancellationToken = default);
 }

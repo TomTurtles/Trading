@@ -1,4 +1,6 @@
-﻿namespace Marek.Trading.Tests;
+﻿using Marek.Trading.Core;
+
+namespace Marek.Trading.Tests;
 
 [TestClass]
 public sealed class _02_BacktestingTests_Positions
@@ -134,7 +136,7 @@ public sealed class _02_BacktestingTests_Positions
         Assert.AreEqual(order.Quantity, position.Quantity);
         Assert.AreEqual(PositionStatus.Open, position.Status);
         Assert.AreEqual(order.Price, position.EntryPrice);
-        Assert.AreEqual(order.Quantity * order.Price, position.GetValue());
+        Assert.AreEqual(order.Quantity * order.Price, position.GetValue(position.EntryPrice));
         Assert.IsTrue(position.IsOpen);
         Assert.IsFalse(position.IsClosed);
         Assert.IsNull(position.ExitPrice);
@@ -272,7 +274,7 @@ public sealed class _02_BacktestingTests_Positions
         Assert.IsTrue(position.IsClosed);
         Assert.IsFalse(position.IsOpen);
         Assert.IsNotNull(position.ExitPrice);
-        Assert.AreEqual(0, position.Quantity);
+        Assert.AreEqual(position.ExitQuantity, position.EntryQuantity);
         Assert.IsTrue(position.EntryOrders.Any());
         Assert.IsTrue(position.ExitOrders.Any());
         Assert.AreEqual(position.EntryOrders.Count, position.ExitOrders.Count);
@@ -339,7 +341,7 @@ public sealed class _02_BacktestingTests_Positions
         Assert.IsTrue(position.IsClosed);
         Assert.IsFalse(position.IsOpen);
         Assert.IsNotNull(position.ExitPrice);
-        Assert.AreEqual(0, position.Quantity);
+        Assert.AreEqual(position.ExitQuantity, position.EntryQuantity);
         Assert.IsTrue(position.EntryOrders.Any());
         Assert.IsTrue(position.ExitOrders.Any());
         Assert.AreEqual(position.EntryOrders.Count, position.ExitOrders.Count);
@@ -406,7 +408,7 @@ public sealed class _02_BacktestingTests_Positions
         Assert.IsFalse(position.IsClosed);
         Assert.IsTrue(position.IsOpen);
         Assert.IsNotNull(position.ExitPrice);
-        Assert.AreNotEqual(0, position.Quantity);
+        Assert.AreNotEqual(position.ExitQuantity, position.EntryQuantity);
         Assert.IsTrue(position.EntryOrders.Any());
         Assert.IsTrue(position.ExitOrders.Any());
         Assert.AreEqual(position.EntryOrders.Count, position.ExitOrders.Count);
@@ -475,7 +477,7 @@ public sealed class _02_BacktestingTests_Positions
         Assert.IsFalse(position.IsClosed);
         Assert.IsTrue(position.IsOpen);
         Assert.IsNotNull(position.ExitPrice);
-        Assert.AreNotEqual(0, position.Quantity);
+        Assert.AreNotEqual(position.ExitQuantity, position.EntryQuantity);
         Assert.IsTrue(position.EntryOrders.Any());
         Assert.IsTrue(position.ExitOrders.Any());
         Assert.AreEqual(position.EntryOrders.Count, position.ExitOrders.Count);
@@ -511,16 +513,16 @@ public sealed class _02_BacktestingTests_Positions
 
         var newHigherMarketPrice = candle.Close * 1.4;
         var expectedPositivePNL = (newHigherMarketPrice - candle.Close) * order.Lever * order.Quantity;
-        Assert.AreEqual(expectedPositivePNL, position.GetPNL(newHigherMarketPrice));
-        Assert.IsTrue(position.GetPNL(newHigherMarketPrice) > 0);
+        Assert.AreEqual(Math.Round(expectedPositivePNL, 8), Math.Round(position.GetUnrealizedPNL(newHigherMarketPrice, order.Quantity), 8));
+        Assert.IsTrue(position.GetUnrealizedPNL(newHigherMarketPrice, order.Quantity) > 0);
 
         var newLowerMarketPrice = candle.Close * 0.95;
         var expectedNegativePNL = (newLowerMarketPrice - candle.Close) * order.Lever * order.Quantity;
-        Assert.AreEqual(expectedNegativePNL, position.GetPNL(newLowerMarketPrice));
-        Assert.IsTrue(position.GetPNL(newLowerMarketPrice) < 0);
+        Assert.AreEqual(Math.Round(expectedNegativePNL, 8), Math.Round(position.GetUnrealizedPNL(newLowerMarketPrice, order.Quantity), 8));
+        Assert.IsTrue(position.GetUnrealizedPNL(newLowerMarketPrice, order.Quantity) < 0);
 
         var newEqualMarketPrice = candle.Close * 1;
-        Assert.AreEqual(position.GetPNL(newEqualMarketPrice), 0);
+        Assert.AreEqual(Math.Round(position.GetUnrealizedPNL(newEqualMarketPrice), 8), 0);
     }
 
     [TestMethod]
@@ -550,16 +552,16 @@ public sealed class _02_BacktestingTests_Positions
 
         var newHigherMarketPrice = candle.Close * 1.4;
         var expectedPositivePNL = (candle.Close - newHigherMarketPrice) * order.Lever * order.Quantity;
-        Assert.AreEqual(expectedPositivePNL, position.GetPNL(newHigherMarketPrice));
-        Assert.IsTrue(position.GetPNL(newHigherMarketPrice) < 0);
+        Assert.AreEqual(Math.Round(expectedPositivePNL, 8), Math.Round(position.GetUnrealizedPNL(newHigherMarketPrice, order.Quantity), 8));
+        Assert.IsTrue(position.GetUnrealizedPNL(newHigherMarketPrice, order.Quantity) < 0);
 
         var newLowerMarketPrice = candle.Close * 0.95;
         var expectedNegativePNL = (candle.Close - newLowerMarketPrice) * order.Lever * order.Quantity;
-        Assert.AreEqual(expectedNegativePNL, position.GetPNL(newLowerMarketPrice));
-        Assert.IsTrue(position.GetPNL(newLowerMarketPrice) > 0);
+        Assert.AreEqual(Math.Round(expectedNegativePNL, 8), Math.Round(position.GetUnrealizedPNL(newLowerMarketPrice, order.Quantity), 8));
+        Assert.IsTrue(position.GetUnrealizedPNL(newLowerMarketPrice, order.Quantity) > 0);
 
         var newEqualMarketPrice = candle.Close * 1;
-        Assert.AreEqual(position.GetPNL(newEqualMarketPrice), 0);
+        Assert.AreEqual(Math.Round(position.GetUnrealizedPNL(newEqualMarketPrice), 8), 0);
     }
 
     [TestMethod]
@@ -575,8 +577,8 @@ public sealed class _02_BacktestingTests_Positions
 
         // Market Order
         var order = Order.CreateLong("BTC_USDT");
-        order.Quantity = (new Random().NextDouble() + 1) * 5;
-        order.Lever = (new Random().NextDouble() + 1) * 3;
+        order.Quantity = 4;
+        order.Lever = 2;
 
         // Act 1
         await exchange.PlaceOrderAsync(order);
@@ -586,9 +588,8 @@ public sealed class _02_BacktestingTests_Positions
         exchange.SetCandle(candle2);
 
         // Partially Closing Market Order
-        var closingFactor = .6;
         var closingOrder = Order.CreateShort("BTC_USDT");
-        closingOrder.Quantity = order.Quantity * closingFactor;
+        closingOrder.Quantity = 1.5;
 
         // Act 2
         await exchange.PlaceOrderAsync(closingOrder);
@@ -601,21 +602,12 @@ public sealed class _02_BacktestingTests_Positions
         Assert.IsNotNull(position);
 
         // Assert Quantity
-        Assert.AreEqual(Math.Round(order.Quantity * (1 - closingFactor), 6), Math.Round(position.Quantity, 6));
         Assert.AreEqual(order.Quantity, position.EntryQuantity);
         Assert.AreEqual(closingOrder.Quantity, position.ExitQuantity);
 
         // Assert Value
-        var areCandlesRaising = candle2.Close >= candle1.Close;
-        var positionPNL = position.GetPNL();
-        if (areCandlesRaising)
-        {
-            Assert.IsTrue(positionPNL >= 0);
-        }
-        else
-        {
-            Assert.IsTrue(positionPNL < 0);
-        }
+        var expectedPNL = (candle2.Close - candle1.Close) * closingOrder.Lever * closingOrder.Quantity;
+        Assert.AreEqual(Math.Round(expectedPNL, 8), Math.Round(position.RealizedPNL, 8));
     }
 
     [TestMethod]
@@ -657,21 +649,12 @@ public sealed class _02_BacktestingTests_Positions
         Assert.IsNotNull(position);
 
         // Assert Quantity
-        Assert.AreEqual(Math.Round(order.Quantity * (1 - closingFactor), 6), Math.Round(position.Quantity, 6));
         Assert.AreEqual(order.Quantity, position.EntryQuantity);
         Assert.AreEqual(closingOrder.Quantity, position.ExitQuantity);
 
         // Assert Value
-        var areCandlesRaising = candle2.Close >= candle1.Close;
-        var positionPNL = position.GetPNL();
-        if (areCandlesRaising)
-        {
-            Assert.IsTrue(positionPNL < 0);
-        }
-        else
-        {
-            Assert.IsTrue(positionPNL >= 0);
-        }
+        var expectedPNL = (candle1.Close - candle2.Close) * closingOrder.Lever * closingOrder.Quantity;
+        Assert.AreEqual(Math.Round(expectedPNL, 8), Math.Round(position.RealizedPNL, 8));
     }
 }
 

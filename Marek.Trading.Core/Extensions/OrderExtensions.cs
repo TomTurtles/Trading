@@ -2,6 +2,75 @@
 
 public static class OrderExtensions
 {
+    public static void ValidateBeforePlacement(this Order order, double? marketPrice = null)
+    {
+        if (order.IsMarket())
+        {
+            if (marketPrice == null) throw new ArgumentNullException(nameof(marketPrice));
+            
+            if (order.IsLong())
+            {
+                // Validate TakeProfitPrice
+                if (order.TakeProfitPrice is not null)
+                {
+                    if (order.TakeProfitPrice.Value <= marketPrice) throw new OrderInvalidException(order, "take profit price must be higher than market price");
+                }
+                // Validate TakeProfitPrice
+                if (order.StopLossPrice is not null)
+                {
+                    if (order.StopLossPrice.Value >= marketPrice) throw new OrderInvalidException(order, "stop loss price must be lower than market price");
+                }
+            }
+
+            if (order.IsShort())
+            {
+                // Validate TakeProfitPrice
+                if (order.TakeProfitPrice is not null)
+                {
+                    if (order.TakeProfitPrice.Value >= marketPrice) throw new OrderInvalidException(order, "take profit price must be lower than market price");
+                }
+                // Validate TakeProfitPrice
+                if (order.StopLossPrice is not null)
+                {
+                    if (order.StopLossPrice.Value <= marketPrice) throw new OrderInvalidException(order, "stop loss price must be higher than market price");
+                }
+            }
+        }
+        
+        if (order.IsLimit())
+        {
+            if (order.Price == null) throw new OrderInvalidException(order, "limit order must have price set");
+
+            if (order.IsLong())
+            {
+                // Validate TakeProfitPrice
+                if (order.TakeProfitPrice is not null)
+                {
+                    if (order.TakeProfitPrice.Value <= order.Price) throw new OrderInvalidException(order, "take profit price must be higher than limit order price");
+                }
+                // Validate TakeProfitPrice
+                if (order.StopLossPrice is not null)
+                {
+                    if (order.StopLossPrice.Value >= order.Price) throw new OrderInvalidException(order, "stop loss price must be lower than limit order price");
+                }
+            }
+
+            if (order.IsShort())
+            {
+                // Validate TakeProfitPrice
+                if (order.TakeProfitPrice is not null)
+                {
+                    if (order.TakeProfitPrice.Value >= order.Price) throw new OrderInvalidException(order, "take profit price must be lower than limit order price");
+                }
+                // Validate TakeProfitPrice
+                if (order.StopLossPrice is not null)
+                {
+                    if (order.StopLossPrice.Value <= order.Price) throw new OrderInvalidException(order, "stop loss price must be higher than limit order price");
+                }
+            }
+        }
+    }
+
     public static double GetValue(this Order order)
     {
         var quantity = order.Quantity;

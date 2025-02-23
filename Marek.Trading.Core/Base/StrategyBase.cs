@@ -63,9 +63,7 @@ public abstract class StrategyBase
     public virtual Task<bool> ShouldCancelOrdersAsync(Candle candle) => Task.FromResult(false);
 
     // Positions
-    public virtual Task<bool> ShouldClosePositionAsync(Candle candle, Position position) => Task.FromResult(false);
-    public virtual Task<bool> ShouldUpdatePositionAsync(Candle candle, Position position) => Task.FromResult(false);
-    public virtual Task<Action<Position>> GoUpdatePositionAsync(Candle candle, Position position) => Task.FromResult<Action<Position>>(position => { });
+    public virtual Task UpdatePositionAsync(Candle candle, Position position, UpdatePositionCommandBuilder builder) => Task.CompletedTask;
 
     // After
     public virtual Task AfterAsync(Candle candle) => Task.CompletedTask;
@@ -94,9 +92,9 @@ public abstract class StrategyBase
     {
         return await Exchange.GetCandleAsync(cancellationToken);
     }
-    protected async Task<List<Candle>> GetCandlesAsync(CancellationToken cancellationToken = default)
+    protected async Task<List<Candle>> GetCandlesAsync(CandleInterval? interval = null, CancellationToken cancellationToken = default)
     {
-        return await Exchange.GetCandlesAsync(cancellationToken: cancellationToken);
+        return await Exchange.GetCandlesAsync(interval ?? CandleInterval, cancellationToken: cancellationToken);
     }
     protected async Task<double> GetFeeRateAsync(CancellationToken cancellationToken = default)
     {
@@ -114,11 +112,45 @@ public abstract class StrategyBase
     #endregion Requests
 
     #region Commands
-    private async Task<StrategyDecision> ClosePositionAsync(Candle candle, Position position, CancellationToken cancellationToken = default)
+    private async Task<StrategyDecision> ExecuteUpdatePositionAsync(Candle candle, Position position, Dictionary<UpdatePositionCommandType, double> commands, CancellationToken cancellationToken = default)
     {
-        await Exchange.ClosePositionAsync(position.Id, cancellationToken: cancellationToken);
-        return StrategyDecision.ClosePosition(candle, position);
+        foreach (var command in commands) 
+        {
+            switch (command.Key)
+            {
+                case UpdatePositionCommandType.Liquidate:
+                    await Exchange.ClosePositionAsync(position.Id, cancellationToken: cancellationToken);
+                    break;
+
+                case UpdatePositionCommandType.UpdateTakeProfitPrice:
+                    await Exchange.UpdatePositionAsync(position.Id, (p) => p.TakeProfitPrice = command.Value, cancellationToken);
+                    break;
+
+                case UpdatePositionCommandType.UpdateStopLossPrice:
+                    await Exchange.UpdatePositionAsync(position.Id, (p) => p.StopLossPrice = command.Value, cancellationToken);
+                    break;
+
+                case UpdatePositionCommandType.DecreaseSize:
+                    if (command.Value >= position.UnrealizedQuantity)
+                    {
+                        await Exchange.ClosePositionAsync(position.Id, cancellationToken: cancellationToken);
+                    }
+                    else
+                    {
+                        await Exchange.DecreasePositionAsync(position.Id, command.Value, cancellationToken: cancellationToken);
+                    }
+                    break;
+
+                case UpdatePositionCommandType.IncreaseSize:
+                    await Exchange.IncreasePositionAsync(position.Id, command.Value, cancellationToken: cancellationToken);
+                    break;
+
+            }
+        }
+
+        return StrategyDecision.UpdatePosition(candle, position, commands.Keys);
     }
+
     private async Task<StrategyDecision> WaitAsync(Candle candle, string reason, CancellationToken cancellationToken = default)
     {
         return await Task.Run(() => StrategyDecision.Wait(candle, reason), cancellationToken);
@@ -169,11 +201,13 @@ public abstract class StrategyBase
 
             if (position is not null && position.IsOpen)
             {
-                // decide whether to stay with current strategy or not (stop-loss, take-profit)
-                // decide whether to alter the current position in profit/loss or size
-                if (await ShouldClosePositionAsync(candle, position))
+                var builder = new UpdatePositionCommandBuilder();
+                await UpdatePositionAsync(candle, position, builder);
+                var commands = builder.Build();
+
+                if (commands.Any())
                 {
-                    return await ClosePositionAsync(candle, position);
+                    return await ExecuteUpdatePositionAsync(candle, position, commands);
                 }
                 else
                 {

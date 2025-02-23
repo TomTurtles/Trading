@@ -28,12 +28,12 @@ public sealed class _00_BacktestingTests_Basic
 
         Assert.IsNotNull(dataFeed);
 
-        var candles = await dataFeed.GetCandlesAsync();
+        var result = await dataFeed.LoadCandlesAsync();
 
         var expectedCandles = await new Test1DataFeed().GetCandlesAsync("", CandleInterval.Minute_5);
 
-        Assert.AreNotEqual(0, candles.Count());
-        Assert.AreEqual(expectedCandles.Count(), candles.Count());
+        Assert.AreNotEqual(0, result.Candles.Count);
+        Assert.AreEqual(expectedCandles.Count(), result.Candles.Count);
     }
 
     [TestMethod]

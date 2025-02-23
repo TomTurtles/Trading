@@ -26,7 +26,7 @@ public static class Module
             .AddSingleton<IBacktestingOrderManagement, BacktestingOrderManagement>()
             .AddSingleton<IBacktestingPositionManagement, BacktestingPositionManagement>()
             .AddSingleton<IBacktestingCashManagement, BacktestingCashManagement>()
-            .AddSingleton<IBacktestingPerformanceTracker, BacktestingPerformanceTracker>()
+            .AddScoped<IBacktestingPerformanceTracker, BacktestingPerformanceTracker>()
             .AddSingleton<IBacktestingStrategy>(p => strategyFactory(p))
             .AddSingleton<IDataFeedExchange>(p => dataFeedExchangeFactory(p));
     }

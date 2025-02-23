@@ -16,7 +16,8 @@ internal class DateTimeComparer : IComparer<DateTime>
         if (y == null) return 1;
 
         // Vergleich der DateTime-Werte
-        return x.CompareTo(y);
+        if (x.Ticks == y.Ticks) return 0;
+        return x.Ticks > y.Ticks ? 1 : -1;
     }
 }
 public class DateTimeEqualityComparer : IEqualityComparer<DateTime>

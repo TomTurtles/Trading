@@ -31,12 +31,20 @@ public class Order(OrderSide side, string symbol)
 
     public double Quantity { get; set; } = 1;
     public double Lever { get; set; } = 1;
-    public double? StopPrice { get; set; }
-    public double? TakePrice { get; set; }
+    public double? StopLossPrice { get; set; }
+    public double? TakeProfitPrice { get; set; }
     public double? PlacedPrice { get; set; }
     public double? ExecutedPrice { get; set; }
+
+    /// <summary>
+    /// Gesamt: ExecutedPrice * Quantity * FeeRate
+    /// </summary>
     public double? ExecutedFee { get; set; }
-    public double? ExecutedValue => ExecutedPrice is null ? null : ExecutedPrice.Value - (ExecutedFee ?? 0);
+
+    /// <summary>
+    /// Gesamt-Wert einer ausgeführten Order (OHNE Gebühren)
+    /// </summary>
+    public double? ExecutedValue => (ExecutedPrice is null ? null : ExecutedPrice.Value) * Quantity;
     public DateTime? PlacedTime { get; set; }
     public DateTime? ExecutedTime { get; set; }
     public DateTime? CancelledTime { get; set; }

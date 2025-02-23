@@ -9,8 +9,8 @@ public class TestSettings
             options.Strategy = "test1";
             options.DataFeed = "test1";
             options.Symbol = "BTC_USDT";
-            options.InitialCash = 1000;
-            options.MarginCallLevel = 100;
+            options.InitialCash = 10000;
+            options.MarginCallLevel = 1000;
         },
         provider =>
         {

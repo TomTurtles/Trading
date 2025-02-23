@@ -1,21 +1,58 @@
-﻿
-namespace Marek.Trading;
+﻿namespace Marek.Trading;
 
 public class BacktestingPerformanceTracker : IBacktestingPerformanceTracker
 {
-    Stopwatch _stopwatch = new();
-    public IMareator Mareator { get; }
-    public ILogger<BacktestingPerformanceTracker> Logger { get; }
+    #region Services
 
-    public BacktestingPerformanceTracker(IMareator mareator, ILogger<BacktestingPerformanceTracker> logger)
+    public IMareator Mareator { get; }
+    public IBacktestingOrderManagement OrderManagement { get; }
+    public IBacktestingPositionManagement PositionManagement { get; }
+    public IBacktestingCashManagement CashManagement { get; }
+    public IOptions<BacktestingOptions> Options { get; }
+    public ILogger<BacktestingPerformanceTracker> Logger { get; }
+    
+    #endregion Services
+
+    public bool IsRunning => _stopwatch.IsRunning;
+
+    private readonly Stopwatch _stopwatch = new();
+    private int _candlesProcessedCount = 0;
+    private List<Candle> _candles = [];
+    private readonly ConcurrentDictionary<DateTime, double> _equityHistory = [];
+
+    #region Initialize
+
+    public BacktestingPerformanceTracker(
+        IMareator mareator, 
+        IBacktestingOrderManagement orderManagement,
+        IBacktestingPositionManagement positionManagement,
+        IBacktestingCashManagement cashManagement,
+        IOptions<BacktestingOptions> options,
+        ILogger<BacktestingPerformanceTracker> logger)
     {
         Mareator = mareator;
+        OrderManagement = orderManagement;
+        PositionManagement = positionManagement;
+        CashManagement = cashManagement;
+        Options = options;
         Logger = logger;
 
+        _previousEquity = Options.Value.InitialCash;
+        _equityHistory.TryAdd(DateTime.MinValue, Options.Value.InitialCash);
+
+        Mareator.Subscribe<OnCandlesLoadedEventArgs>(HandleCandlesLoaded);
+        Mareator.Subscribe<OnNewCandleEventArgs>(HandleNewCandle);
         Mareator.Subscribe<OnStrategyDecisionEventArgs>(HandleStrategyDecision);
         Mareator.Subscribe<OnAccountReportEventArgs>(HandleAccountReport);
         Mareator.Subscribe<OnBacktestingCashUpdatedEventArgs>(HandleCashUpdated);
+        Mareator.Subscribe<OnPositionOpenedEventArgs>(HandlePositionOpened);
+        Mareator.Subscribe<OnPositionUpdatedEventArgs>(HandlePositionUpdated);
+        Mareator.Subscribe<OnPositionClosedEventArgs>(HandlePositionClosed);
     }
+
+    #endregion Initialize
+
+    #region Start/Finish
 
     public void Start()
     {
@@ -26,144 +63,78 @@ public class BacktestingPerformanceTracker : IBacktestingPerformanceTracker
     {
         _stopwatch.Stop();
         Logger.LogInformation($"Duration: {_stopwatch.Elapsed}");
+        NotifyPerformanceResult();
     }
 
+    #endregion Start/Finish
+
+    #region EventHandlers
+    private void HandleCandlesLoaded(object sender, OnCandlesLoadedEventArgs e)
+    {
+        _candles = e.Candles;
+    }
+
+    private void HandleNewCandle(object sender, OnNewCandleEventArgs e)
+    {
+        _candlesProcessedCount++;
+    }
+
+    private void HandlePositionClosed(object sender, OnPositionClosedEventArgs e)
+    {
+
+    }
+
+    private void HandlePositionUpdated(object sender, OnPositionUpdatedEventArgs e)
+    {
+
+    }
+
+    private void HandlePositionOpened(object sender, OnPositionOpenedEventArgs e)
+    {
+
+    }
     private void HandleStrategyDecision(object sender, OnStrategyDecisionEventArgs e)
     {
+        if (e.Decision.Type == StrategyDecisionType.Wait) return;
         Logger.LogInformation($"{e.Candle} --> Decision {e.Decision}");
     }
 
+    private double _previousEquity;
     private void HandleAccountReport(object sender, OnAccountReportEventArgs e)
     {
-        Logger.LogInformation($"{e.Candle} --> Equity {e.Equity} ({e.Cash / e.Equity:0.0 %})");
+        if (e.Equity != _previousEquity)
+        {
+            Logger.LogInformation($"{e.Candle} --> Equity {e.Equity} ({(e.Equity - _previousEquity)/_previousEquity:0.00 %})");
+            _previousEquity = e.Equity;
+        }
+        
+        _equityHistory.AddOrUpdate(e.Candle.Timestamp, e.Equity, (ts, eq) => e.Equity);
     }
 
     private void HandleCashUpdated(object sender, OnBacktestingCashUpdatedEventArgs e)
     {
-        Logger.LogDebug($"[{e.Timestamp}] Cash {e.Absolute} ({(e.Relative / e.Absolute):0.00 %})");
+
     }
 
-    //private int NewCandleCounter = 0;
-    //private int StrategyExecutedCounter = 0;
+    #endregion EventHandlers
 
+    private async void NotifyPerformanceResult()
+    {
+        // darauf warten, dass alle Daten ankommen (equityHistory hat einen Wert mehr - InitialCash)
+        await Task.Delay(200);
+        Debug.WriteLine($"Vergleich CandleCount: {_candlesProcessedCount} | {_candles.Count} | {_equityHistory.Count} | {PositionManagement.GetHistory().Count} | {CashManagement.GetHistory().Count}");
+        await Task.Delay(200);
+        Debug.WriteLine($"Vergleich CandleCount: {_candlesProcessedCount} | {_candles.Count} | {_equityHistory.Count} | {PositionManagement.GetHistory().Count} | {CashManagement.GetHistory().Count}");
+        await Task.Delay(200);
+        Debug.WriteLine($"Vergleich CandleCount: {_candlesProcessedCount} | {_candles.Count} | {_equityHistory.Count} | {PositionManagement.GetHistory().Count} | {CashManagement.GetHistory().Count}");
 
-    //public IEventSystem EventSystem { get; }
-    //public BacktestExchange Exchange { get; }
+        var strategy = new StrategyPerformanceResult(new(PositionManagement.GetHistory()));
+        var backtesting = new BacktestingPerformanceResult(_stopwatch.Elapsed);
+        var candles = new CandlesPerformanceResult(_candles);
+        var equity = new EquityPerformanceResult(new(_equityHistory.OrderBy(kvp => kvp.Key).ToDictionary(kvp => kvp.Key, kvp => kvp.Value)), _candles);
+        var cash = new CashPerformanceResult(new(CashManagement.GetHistory()));
 
-    //public double InitialCash { get; }
-    //private Stopwatch Stopwatch { get; set; }
-    //public TimeSpan Duration => Stopwatch.Elapsed;
-    //public DateTime Start => RunningCandles.First().Timestamp;
-    //public DateTime End => RunningCandles.Last().Timestamp;
-    //public TimeSpan Period => End - Start;
-    //public bool MarginCall { get; private set; } = false;
-    //public IEnumerable<Candle> RunningCandles { get; }
-    //public int MaxCandleCount => RunningCandles.Count();
+        Mareator.Publish(this, new OnBacktestingPerformanceResultEventArgs(strategy, backtesting, candles, equity, cash));
 
-
-
-    //// Candles
-    //public int GetCandlesCount() => RunningCandles.Count();
-    //public CandleInterval GetCandleInterval() => RunningCandles.First().Interval;
-
-    //// Cash
-
-    //public IDictionary<DateTime, double> GetCashCurve() => Exchange.CashManagement.GetPerformance();
-    //public double GetCashMaximum() => GetCashCurve().Values.Max();
-    //public double GetCashMinimum() => GetCashCurve().Values.Min();
-    //public double GetCashStart() => GetCashCurve().Select(kvp => kvp.Value).First();
-    //public double GetCashEnd() => GetCashCurve().Select(kvp => kvp.Value).Last();
-    //public double GetCashPerformance() => (GetCashEnd() - GetCashStart()) / GetCashStart();
-    //public double GetMaxDrawdown()
-    //{
-    //    var maxDrawdown = 0m;
-    //    var peak = GetCashCurve().First().Value;
-
-    //    foreach (var (date, cash) in GetCashCurve())
-    //    {
-    //        if (cash > peak) peak = cash;
-    //        var drawdown = (peak - cash) / peak;
-    //        if (drawdown > maxDrawdown) maxDrawdown = drawdown;
-    //    }
-
-    //    return -maxDrawdown;
-    //}
-
-    //// Exceptions
-
-    //private void HandleStrategyException(OnStrategyExceptionEventArgs args) => OrderedExceptions.Add(args.Candle.Timestamp, args.GetException());
-
-    //public Dictionary<DateTime, Exception> OrderedExceptions = new Dictionary<DateTime, Exception>();
-    //public IEnumerable<string> GetExceptions() => OrderedExceptions.Values.Select(ex => ex.Message);
-    //public void AddException(Candle candle, Exception ex) => OrderedExceptions.TryAdd(candle.Timestamp, ex);
-    //public IEnumerable<Order> GetOrders() => Enumerable.Empty<Order>();
-    //internal void CallMargin() => MarginCall = true;
-
-    //#region Positions
-
-    //public IEnumerable<Position> GetClosedPositions() => Exchange.PositionManagement.GetClosedPositionsAsync().GetAwaiter().GetResult();
-    //public int GetClosedPositionsCount() => GetClosedPositions().Count();
-    //public double GetClosedPositionsRealization() => GetClosedPositions().Sum(p => p.RealisationAfterFee ?? 0m);
-    //public double GetClosedPositionsWinRate()
-    //{
-    //    var closedPositions = GetClosedPositions();
-    //    if (!closedPositions.Any()) return 1;
-    //    return (double)closedPositions.Count(p => p.Win) / GetClosedPositionsCount() * 100;
-    //}
-
-    //public double GetClosedPositionsWinToLossAverage()
-    //{
-    //    var closedPositions = GetClosedPositions();
-    //    if (!closedPositions.Any()) return 1;
-
-    //    var positiveRealization = closedPositions.Where(p => p.Win).Average(p => p.RealisationAfterFee!.Value);
-    //    var negativeRealization = Math.Abs(closedPositions.Where(p => !p.Win).Average(p => p.RealisationAfterFee!.Value));
-
-    //    return positiveRealization / (negativeRealization == 0 ? 1 : negativeRealization);
-    //}
-    //#endregion Positions
-
-    //#region Equity
-
-    //public IDictionary<DateTime, double> GetEquityCurve() => GetCashCurve();
-    //public double GetEquityStart() => GetEquityCurve().Values.First();
-    //public double GetEquityEnd() => GetEquityCurve().Values.Last();
-    //public double GetEquityMinimum() => GetEquityCurve().Values.Min();
-    //public double GetEquityMaximum() => GetEquityCurve().Values.Max();
-    //public object GetEquityPerformance() => (GetEquityEnd() - GetEquityStart()) / GetEquityStart();
-
-    //#endregion Equity
-
-    //#region Stopwatch
-    //private void HandleNewCandle(OnNewCandleEventArgs args)
-    //{
-    //    if (NewCandleCounter == 0)
-    //    {
-    //        Stopwatch = Stopwatch.StartNew();
-    //    }
-
-    //    NewCandleCounter++;
-
-    //    if (NewCandleCounter == MaxCandleCount)
-    //    {
-    //        Console.WriteLine($"All Candles published");
-    //    }
-    //}
-    //private void HandleStrategyExecuted(OnStrategyExecutedEventArgs args)
-    //{
-    //    StrategyExecutedCounter++;
-
-    //    if (StrategyExecutedCounter == MaxCandleCount)
-    //    {
-    //        Console.WriteLine($"All Strategies handled");
-    //        Stopwatch.Stop();
-    //    }
-    //}
-
-    //internal async Task ProcessAsync()
-    //{
-    //    while (StrategyExecutedCounter < MaxCandleCount) await Task.Delay(30);
-    //}
-
-    //#endregion Stopwatch
+    }
 }

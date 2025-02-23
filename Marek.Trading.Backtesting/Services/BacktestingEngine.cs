@@ -1,34 +1,50 @@
-﻿
-namespace Marek.Trading.Backtesting;
+﻿namespace Marek.Trading.Backtesting;
 
-public class BacktestingEngine(
-    IBacktestingDataFeed dataFeed, 
-    IBacktestingStrategy strategy,
-    IBacktestingExchange exchange,
-    IBacktestingPerformanceTracker performanceTracker,
-    ILogger<BacktestingEngine> logger) : IBacktestingEngine
+public class BacktestingEngine : IBacktestingEngine
 {
-    public IBacktestingDataFeed DataFeed { get; } = dataFeed;
-    public IBacktestingExchange Exchange { get; } = exchange;
-    public IBacktestingStrategy Strategy { get; } = strategy;
-    public IBacktestingPerformanceTracker PerformanceTracker { get; } = performanceTracker;
-    public ILogger<BacktestingEngine> Logger { get; set; } = logger;
+    public IMareatorEventDispatcher EventDispatcher { get; }
+    public IBacktestingDataFeed DataFeed { get; }
+    public IBacktestingExchange Exchange { get; }
+    public IBacktestingStrategy Strategy { get; }
+    public IBacktestingPerformanceTracker PerformanceTracker { get; }
+    public IOptions<BacktestingOptions> Options { get; }
+    public ILogger<BacktestingEngine> Logger { get; set; }
 
-    public bool IsRunning { get; private set; } = false;
+    public bool IsRunning => PerformanceTracker.IsRunning;
+
+    public event EventHandler<OnBacktestingPerformanceResultEventArgs> OnBacktestingFinished;
+    public BacktestingEngine(
+        IMareatorEventDispatcher eventDispatcher,
+        IBacktestingDataFeed dataFeed,
+        IBacktestingStrategy strategy,
+        IBacktestingExchange exchange,
+        IBacktestingPerformanceTracker performanceTracker,
+        IOptions<BacktestingOptions> options,
+        ILogger<BacktestingEngine> logger)
+    {
+        EventDispatcher = eventDispatcher;
+        DataFeed = dataFeed;
+        Exchange = exchange;
+        Strategy = strategy;
+        PerformanceTracker = performanceTracker;
+        Options = options;
+        Logger = logger;
+
+        EventDispatcher.Subscribe<OnBacktestingPerformanceResultEventArgs>(HandleBacktestingPerformanceResult);
+    }
+
 
     public async Task RunAsync(CancellationToken cancellationToken = default)
     {
-        IsRunning = true;
-
         PerformanceTracker.Start();
 
         // DataFeed triggern
-        var candles = await DataFeed.GetCandlesAsync(cancellationToken);
+        var result = await DataFeed.LoadCandlesAsync(cancellationToken);
 
         // Exchange Candles übergeben
-        Exchange.SetCandles(candles);
+        Exchange.SetCandles(result);
 
-        foreach (var candle in candles)
+        foreach (var candle in result.Candles.Where(c => c.Timestamp >= Options.Value.StartAt))
         {
             // Exchange über die Aktuelle Candle informieren
             Exchange.SetCandle(candle);
@@ -37,6 +53,7 @@ public class BacktestingEngine(
             if (await Exchange.HasMarginCallAsync(cancellationToken))
             {
                 Logger.LogWarning($"MARGIN CALL LEVEL REACHED AT CANDLE {candle}. Backtesting will be cancelled.");
+                PerformanceTracker.Finish();
                 return;
             }
 
@@ -45,19 +62,65 @@ public class BacktestingEngine(
 
             // Strategy die aktuelle Candle behandeln lassen
             await Strategy.RunAsync(candle, cancellationToken);
+
+            // Exchange Account Report
+            await Exchange.NotifyAccountReportAsync(cancellationToken);
         }
 
         // Letzte offene Position schließen
         await CloseLastOpenPositionAsync(cancellationToken);
 
         PerformanceTracker.Finish();
-
-        IsRunning = false;
     }
 
     private async Task CloseLastOpenPositionAsync(CancellationToken cancellationToken)
     {
-        await Exchange.ClosePositionAsync("", null, cancellationToken);
+        var openPosition = await Exchange.GetOpenPositionAsync();
+        if (openPosition is not null && openPosition.IsOpen)
+        {
+            await Exchange.ClosePositionAsync(openPosition.Id, null, cancellationToken);
+        }
         await Exchange.NotifyAccountReportAsync(cancellationToken);
+    }
+
+    private void HandleBacktestingPerformanceResult(object sender, OnBacktestingPerformanceResultEventArgs e)
+    {
+        var prefixGroups = e
+            .ToKeyValuePairs()
+            .GroupBy(kvp =>
+            {
+                var arr = kvp.Key.Split('.');
+                return (arr.Length <= 1) ? "Global" : arr[0];
+            });
+
+        var sb = new StringBuilder()
+            .AppendLine()
+            .AppendLine()
+            .AppendLine($"----------------------------------------")
+            .AppendLine($"PERFORMANCE RESULT")
+            .AppendLine($"----------------------------------------");
+
+        foreach (var group in prefixGroups)
+        {
+            var prefix = group.Key;
+
+            var values = group.ToDictionary(g => g.Key.Split('.').Last(), g => g.Value);
+
+            sb
+            .AppendLine()
+            .AppendLine()
+            .AppendLine($"-------------------")
+            .AppendLine($"{prefix.ToUpperInvariant()}")
+            .AppendLine()
+            .AppendJoin('\n', values.Select(kvp => $"{kvp.Key}: {kvp.Value}"));
+
+        };
+
+        var resultString = sb.ToString();
+
+        Logger.LogInformation(resultString);
+        Debug.WriteLine(resultString);
+
+        OnBacktestingFinished?.Invoke(this, e);
     }
 }

@@ -15,9 +15,9 @@ public class BacktestingOrderManagement(
     public IOptions<BacktestingOptions> Options { get; } = options;
 
     // Management
-    private ConcurrentDictionary<DateTime, Order> OrderHistory { get; } = new(DateTimeEqualityComparer.Use());
-    private Dictionary<DateTime, Order> OrderedOrders => new(OrderHistory.OrderBy(o => o.Key));
-    private IEnumerable<Order> Orders => OrderedOrders.Values;
+    private readonly ConcurrentDictionary<DateTime, List<Order>> _orderHistory = new(DateTimeEqualityComparer.Use());
+    private Dictionary<DateTime, List<Order>> OrderedOrders => new(_orderHistory.OrderBy(o => o.Key));
+    private IEnumerable<Order> Orders => OrderedOrders.Values.SelectMany(o => o);
 
     #region Requests
 
@@ -34,7 +34,7 @@ public class BacktestingOrderManagement(
     {
         return Task.FromResult(Orders.SingleOrDefault(o => o.Id == id) ?? null);
     }
-    public Task<Dictionary<DateTime, Order>> GetOrderHistoryAsync(CancellationToken cancellationToken = default)
+    public Task<Dictionary<DateTime, List<Order>>> GetOrderHistoryAsync(CancellationToken cancellationToken = default)
     {
         return Task.FromResult(OrderedOrders);
     }
@@ -47,14 +47,14 @@ public class BacktestingOrderManagement(
     {
         if (order.Quantity <= 0) throw new InvalidOperationException($"invalid order quantity '{order.Quantity}'");
 
-        // (1) Existiert bereits schon eine passende Position oder wird eine Position neu eröffnet?
+        // Existiert bereits schon eine passende Position oder wird eine Position neu eröffnet?
         var position = await PositionManagement.GetOpenPositionAsync(cancellationToken);
         var createNewPosition = position is null;
 
-        // (2) Limit oder Market?
+        // Limit oder Market?
         var isMarket = IsMarketOrder(order, marketPrice);
 
-        // (3) Anwenden
+        // Anwenden
         if (createNewPosition)
         {
             // erzeuge neue Position, Cash wird reserviert
@@ -84,6 +84,12 @@ public class BacktestingOrderManagement(
         }
     }
 
+    public Task ExecuteOrderAsync(DateTime timestamp, Order order, double executionPrice, double feeRate, CancellationToken cancellationToken)
+    {
+        ExecuteOrder(timestamp, order, executionPrice, feeRate);
+        return Task.CompletedTask;
+    }
+
     public Task CheckOrdersToExecuteAsync(Candle candle, double marketPrice, double feeRate, CancellationToken cancellationToken = default)
     {
         var pendingOrders = Orders.Where(o => o.IsPending());
@@ -105,7 +111,8 @@ public class BacktestingOrderManagement(
         if (order.IsMarket()) return true;
 
         if (order.Price.IsPriceNear(marketPrice)) return true;
-
+        
+        // Wenn eine Limit Order zu teuer drin ist, dann wird sie zur MarkOrder korrigiert
         return order.IsLong()
             ? order.Price >= marketPrice
             : order.Price <= marketPrice;
@@ -113,7 +120,8 @@ public class BacktestingOrderManagement(
 
     public Task CancelOrderAsync(DateTime timestamp, string id, CancellationToken cancellationToken = default)
     {
-        var order = OrderHistory.Values.SingleOrDefault(o => o.Id.Equals(id, StringComparison.InvariantCultureIgnoreCase));
+        var order = Orders.SingleOrDefault(o => o.Id.Equals(id, StringComparison.InvariantCultureIgnoreCase));
+
         if (order is not null)
         {
             CancelOrder(timestamp, order);
@@ -139,14 +147,16 @@ public class BacktestingOrderManagement(
             throw new Exception($"Order Id already in use '{order.Id}'");
         }
 
-        var success = OrderHistory.TryAdd(timestamp, order);
-        if (!success)
-        {
-            throw new Exception($"[{timestamp}] error on adding order to order history");
-        }
+        order.ValidateBeforePlacement(marketPrice);
 
-        var price = (order.IsMarket() ? marketPrice ?? order.Price : order.Price)
+        var price = (order.IsMarket() ? order.Price ?? marketPrice : order.Price)
             ?? throw new NullReferenceException("unable to estimate placing price");
+
+        _orderHistory.AddOrUpdate(
+            timestamp,
+            ts => [order],
+            (ts, list) => [order, ..list]
+        );
 
         order.SetPlaced(timestamp, price);
 
@@ -154,7 +164,7 @@ public class BacktestingOrderManagement(
 
         if (doAddCash)
         {
-            CashManagement.AddCash(timestamp, (-1) * order.GetValue());
+            CashManagement.AddCash(new(timestamp, (-1) * order.GetValue(), "Place Order"));
         }
     }
 
@@ -165,9 +175,10 @@ public class BacktestingOrderManagement(
     /// <param name="order"></param>
     private void CancelOrder(DateTime timestamp, Order order)
     {
+        // hier ist die Reihenfolge wichtig
+        CashManagement.AddCash(new(timestamp, order.GetValue(), "Cancel Order"));
         order.SetCancelled(timestamp);
         if (order.PlacedPrice is null) throw new NullReferenceException(nameof(order.PlacedPrice));
-        CashManagement.AddCash(timestamp, order.GetValue());
     }
 
     /// <summary>
@@ -183,6 +194,6 @@ public class BacktestingOrderManagement(
         if (executionPrice is null) throw new NullReferenceException($"execution price is not set for executing a market order");
         if (feeRate is null) throw new NullReferenceException($"fee rate is not set for executing a market order");
         order.SetExecuted(timestamp, executionPrice.Value, feeRate.Value);
-        PositionManagement.UpdatePositionByOrderAsync(timestamp, order);
+        PositionManagement.UpdatePositionByExecutedOrderAsync(timestamp, order);
     }
 }

@@ -12,14 +12,16 @@ public class Position
 
     [ConvertStringEnum]
     public PositionSide Side { get; init; }
+    public bool IsLong => Side == PositionSide.LONG;
+    public bool IsShort => Side == PositionSide.SHORT;
 
-    public double? StopPrice { get; set; }
-    public double? TakePrice { get; set; }
+    public double? StopLossPrice { get; set; }
+    public double? TakeProfitPrice { get; set; }
 
     /// <summary>
     /// Depending on executed Orders
     /// </summary>
-    public PositionStatus Status => EntryQuantity > 0 && Quantity <= 0 ? PositionStatus.Closed : PositionStatus.Open;
+    public PositionStatus Status => EntryQuantity > 0 && ExitQuantity == EntryQuantity ? PositionStatus.Closed : PositionStatus.Open;
     public bool IsOpen => Status == PositionStatus.Open;
     public bool IsClosed => Status == PositionStatus.Closed;
 
@@ -28,17 +30,19 @@ public class Position
     /// </summary>
     public double EntryQuantity => EntryOrders.Sum(o => o.Quantity);
     public double ExitQuantity => ExitOrders.Sum(o => o.Quantity);
-    public double Quantity => EntryQuantity - ExitQuantity;
+    public double Quantity => EntryQuantity;
+    public double UnrealizedQuantity => EntryQuantity - ExitQuantity;
+    public double RealizedQuantity => ExitQuantity;
 
     /// <summary>
     /// Depending on Executed Orders, all orders must share the same lever
     /// </summary>
-    public double Lever => ExecutedOrders.First().Lever;
+    public double Lever => ExecutedOrders.FirstOrDefault()?.Lever ?? 1d;
 
     /// <summary>
     /// Last Entry Order Execution Time
     /// </summary>
-    public DateTime EntryTime => OrderedEntryOrders.Last().ExecutedTime!.Value;
+    public DateTime EntryTime => OrderedEntryOrders.FirstOrDefault().ExecutedTime!.Value;
 
     /// <summary>
     /// Last Exit Order Execution Time
@@ -46,22 +50,60 @@ public class Position
     public DateTime? ExitTime => OrderedExitOrders.LastOrDefault()?.ExecutedTime;
 
     /// <summary>
-    /// All Entry Orders Avg Execution Price
+    /// Timespan of position to be "alive"
     /// </summary>
-    public double EntryPrice => EntryOrders.Average(o => o.ExecutedPrice!.Value);
+    public TimeSpan Lifetime => ExitTime is null ? TimeSpan.FromSeconds(0) : ExitTime.Value - EntryTime;
+
+    /// <summary>
+    /// Durchschnittlicher Einstiegspreis basierend auf ausgeführten Entry-Orders.
+    /// Falls keine Orders vorhanden sind, wird 0 zurückgegeben.
+    /// </summary>
+    public double EntryPrice
+    {
+        get
+        {
+            var totalQuantity = EntryOrders.Sum(o => o.Quantity);
+            if (totalQuantity == 0) return 0; // Absicherung gegen Division durch 0
+
+            var weightedSum = EntryOrders.Sum(o => (o.ExecutedPrice ?? 0) * o.Quantity);
+            return weightedSum / totalQuantity;
+        }
+    }
+
     public double EntryValue => EntryPrice * EntryQuantity;
 
     /// <summary>
-    /// All Exit Orders Avg Execution Price
+    /// Durchschnittlicher Exit-Preis basierend auf ausgeführten Exit-Orders.
+    /// Falls keine Exit-Orders vorhanden sind, wird null zurückgegeben.
     /// </summary>
-    public double? ExitPrice => ExitOrders.Any() ? ExitOrders.Average(o => o.ExecutedPrice!.Value) : null;
+    public double? ExitPrice
+    {
+        get
+        {
+            var totalQuantity = ExitOrders.Sum(o => o.Quantity);
+            if (totalQuantity == 0) return null; // Kein Exit-Preis, falls keine Exit-Orders existieren
+
+            var weightedSum = ExitOrders.Sum(o => (o.ExecutedPrice ?? 0) * o.Quantity);
+            return weightedSum / totalQuantity;
+        }
+    }
+
     public double ExitValue => (ExitPrice ?? 0) * ExitQuantity;
 
     /// <summary>
     /// All Orders Sum Fee
     /// </summary>
-    public double Fee => ExecutedOrders.Sum(o => o.ExecutedFee!.Value);
+    public double Fee => ExecutedOrders.Sum(o => o.ExecutedFee ?? 0);
 
+    public double RealizedPNL
+    {
+        get
+        {
+            var diff = (ExitPrice ?? EntryPrice) - EntryPrice;
+            var sign = Side == PositionSide.LONG ? 1 : -1;
+            return sign * diff * Lever * RealizedQuantity;
+        }
+    }
 
     #region Orders
     private List<Order> ExecutedOrders { get; } = [];
@@ -81,8 +123,8 @@ public class Position
         {
             Symbol = order.Symbol,
             Side = order.ToPositionSide(),
-            StopPrice = order.StopPrice,
-            TakePrice = order.TakePrice,
+            StopLossPrice = order.StopLossPrice,
+            TakeProfitPrice = order.TakeProfitPrice,
         };
 
         position.AddExecutedOrder(order);
@@ -108,41 +150,21 @@ public class Position
         ExecutedOrders.Add(order);
     }
 
-    public double GetValue(double? price = null, double? quantity = null)
-    {
-        price ??= ExitPrice ?? EntryPrice;
-        quantity ??= Quantity;
-
-        // cancel
-        if (price == null) return 0;
-        if (quantity == null) return 0;
-        if (price < 0) return 0;
-        if (quantity < 0) return 0;
-
-        return EntryValue + GetPNL(price, quantity);
-    }
-
-    public double GetPNL(double? price = null, double? quantity = null)
-    {
-        price ??= ExitPrice ?? EntryPrice;
-        quantity ??= Quantity;
-        return (Side == PositionSide.LONG ? price.Value - EntryPrice : EntryPrice - price.Value) * Lever * quantity.Value;
-    }
 
     public override string ToString()
     {
         var sb = new StringBuilder()
-            .AppendLine($"")
-            .AppendLine($"")
-            .AppendLine($"{Id}")
+            .AppendLine($"Position: {Id}")
             .AppendLine($"{Side}, Entry: {EntryPrice} x {EntryQuantity} at {EntryTime}");
 
         if (ExitPrice is not null)
         {
             sb.AppendLine($"Exit: ({ExitPrice}) at {ExitTime}");
-            sb.AppendLine($"PNL: {GetPNL()} (leverage: {Lever})");
-            sb.AppendLine($"Fee: {Fee}");
         }
+
+        sb.AppendLine($"PNL: {RealizedPNL} (leverage: {Lever})")
+          .AppendLine($"Fee: {Fee}")
+          .AppendLine($"Value: {this.GetValue()}");
 
         return sb.ToString();
     }

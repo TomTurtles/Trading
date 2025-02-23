@@ -46,7 +46,7 @@ public abstract class ExchangeBase : IExchange, IExchangeInitializable
     public virtual Task DisconnectAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 
     // Candles
-    public abstract Task<List<Candle>> GetCandlesAsync(int? limit = null, DateTime? start = null, DateTime? end = null, CancellationToken cancellationToken = default);
+    public abstract Task<List<Candle>> GetCandlesAsync(CandleInterval interval, int? limit = null, DateTime? start = null, DateTime? end = null, CancellationToken cancellationToken = default);
     public abstract Task<Candle> GetCandleAsync(CancellationToken cancellationToken = default);
 
     // Orders
@@ -60,7 +60,10 @@ public abstract class ExchangeBase : IExchange, IExchangeInitializable
     // Positions
     public abstract Task<Position?> GetOpenPositionAsync(CancellationToken cancellationToken = default);
     public abstract Task<IEnumerable<Position>> GetPositionsAsync(CancellationToken cancellationToken = default);
+    public abstract Task UpdatePositionAsync(string id, Action<Position> configure, CancellationToken cancellationToken = default);
     public abstract Task ClosePositionAsync(string id, double? executionPrice = null, CancellationToken cancellationToken = default);
+    public abstract Task IncreasePositionAsync(string id, double size, double? executionPrice = null, CancellationToken cancellationToken = default);
+    public abstract Task DecreasePositionAsync(string id, double size, double? executionPrice = null, CancellationToken cancellationToken = default);
 
     // Others
     public abstract Task<double> GetEquityAsync(CancellationToken cancellationToken = default);
