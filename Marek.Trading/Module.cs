@@ -27,15 +27,97 @@ public static class Module
             .AddSingleton<IBacktestingPositionManagement, BacktestingPositionManagement>()
             .AddSingleton<IBacktestingCashManagement, BacktestingCashManagement>()
             .AddScoped<IBacktestingPerformanceTracker, BacktestingPerformanceTracker>()
-            .AddSingleton<IBacktestingStrategy>(p => strategyFactory(p))
-            .AddSingleton<IDataFeedExchange>(p => dataFeedExchangeFactory(p));
+            .AddSingleton<IBacktestingStrategy>(provider => strategyFactory(provider))
+            .AddSingleton<IDataFeedExchange>(provider => dataFeedExchangeFactory(provider));
     }
 
-    public static IServiceCollection AddMarekLiveTrading(this IServiceCollection services, IStrategy strategy, Action<MarekLiveTradingOptions> configure)
+    public static IServiceCollection AddMarekBacktesting<TStrategy, TDataFeedExchange>(
+        this IServiceCollection services,
+        Action<BacktestingOptions> configure,
+        TStrategy strategy,
+        TDataFeedExchange dataFeedExchange,
+        params Type[] types)
+        where TStrategy : IBacktestingStrategy
+        where TDataFeedExchange : IDataFeedExchange
+    {
+        types = [
+            ..types,
+            typeof(BacktestingDataFeed),
+            typeof(BacktestingExchange),
+        ];
+
+        return services
+            .AddMareator(types)
+            .Configure<BacktestingOptions>(configure)
+            .AddSingleton<IBacktestingEngine, BacktestingEngine>()
+            .AddSingleton<IBacktestingDataFeed, BacktestingDataFeed>()
+            .AddSingleton<IBacktestingExchange, BacktestingExchange>()
+            .AddSingleton<IBacktestingOrderManagement, BacktestingOrderManagement>()
+            .AddSingleton<IBacktestingPositionManagement, BacktestingPositionManagement>()
+            .AddSingleton<IBacktestingCashManagement, BacktestingCashManagement>()
+            .AddScoped<IBacktestingPerformanceTracker, BacktestingPerformanceTracker>()
+            .AddSingleton<IBacktestingStrategy>(provider =>
+            {
+                if (strategy is IStrategyInitializable initializable)
+                {
+                    var logger = provider.GetRequiredService<ILogger<IStrategy>>();
+                    var eventDispatcher = provider.GetRequiredService<IMareatorEventDispatcher>();
+                    var exchange = provider.GetRequiredService<IBacktestingExchange>();
+                    var options = provider.GetRequiredService<IOptions<BacktestingOptions>>();
+
+                    initializable.Initialize(eventDispatcher, exchange, logger, options.Value);
+                }
+
+                return strategy;
+            })
+            .AddSingleton<IDataFeedExchange>(provider => 
+            {
+                if (dataFeedExchange is IExchangeInitializable exchangeInitializable)
+                {
+                    var eventDispatcher = provider.GetRequiredService<IMareatorEventDispatcher>();
+                    var logger = provider.GetRequiredService<ILogger<IExchange>>();
+                    var options = provider.GetRequiredService<IOptions<BacktestingOptions>>();
+                    exchangeInitializable.Initialize(eventDispatcher, logger, options.Value);
+                }
+
+                return dataFeedExchange;
+            });
+    }
+
+    public static IServiceCollection AddMarekLiveTrading(
+        this IServiceCollection services, 
+        IStrategy strategy, 
+        IExchange exchange,
+        Action<LiveTradingEngineOptions> configure)
     {
         return services
-            .Configure<MarekLiveTradingOptions>(configure)
-            .AddTransient<IStrategy>((provider) => strategy);
+            .Configure<LiveTradingEngineOptions>(configure)
+            .AddSingleton<IStrategy>(provider =>
+            {
+                if (strategy is IStrategyInitializable initializable)
+                {
+                    var logger = provider.GetRequiredService<ILogger<IStrategy>>();
+                    var eventDispatcher = provider.GetRequiredService<IMareatorEventDispatcher>();
+                    var exchange = provider.GetRequiredService<IBacktestingExchange>();
+                    var options = provider.GetRequiredService<IOptions<LiveTradingEngineOptions>>();
+
+                    //initializable.Initialize(eventDispatcher, exchange, logger, options.Value);
+                }
+
+                return strategy;
+            })
+            .AddSingleton<IExchange>(provider =>
+            {
+                if (exchange is IExchangeInitializable exchangeInitializable)
+                {
+                    var eventDispatcher = provider.GetRequiredService<IMareatorEventDispatcher>();
+                    var logger = provider.GetRequiredService<ILogger<IExchange>>();
+                    var options = provider.GetRequiredService<IOptions<LiveTradingEngineOptions>>();
+                    //exchangeInitializable.Initialize(eventDispatcher, logger, options.Value);
+                }
+
+                return exchange;
+            });
     }
 }
 
