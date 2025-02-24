@@ -62,7 +62,7 @@ public abstract class StrategyBase
     public virtual Task<bool> ShouldCancelOrdersAsync(Candle candle) => Task.FromResult(false);
 
     // Positions
-    public virtual Task UpdatePositionAsync(Candle candle, Position position, UpdatePositionCommandBuilder builder) => Task.CompletedTask;
+    public virtual Task UpdatePositionAsync(Candle candle, IPosition position, UpdatePositionCommandBuilder builder) => Task.CompletedTask;
 
     // After
     public virtual Task AfterAsync(Candle candle) => Task.CompletedTask;
@@ -75,7 +75,7 @@ public abstract class StrategyBase
     {
         return await Exchange.GetMarginAsync(cancellationToken);
     }
-    protected async Task<Position?> GetOpenPositionAsync(CancellationToken cancellationToken = default)
+    protected async Task<IPosition?> GetOpenPositionAsync(CancellationToken cancellationToken = default)
     {
         return await Exchange.GetOpenPositionAsync(cancellationToken);
     }
@@ -111,7 +111,7 @@ public abstract class StrategyBase
     #endregion Requests
 
     #region Commands
-    private async Task<StrategyDecision> ExecuteUpdatePositionAsync(Candle candle, Position position, Dictionary<UpdatePositionCommandType, double> commands, CancellationToken cancellationToken = default)
+    private async Task<StrategyDecision> ExecuteUpdatePositionAsync(Candle candle, IPosition position, Dictionary<UpdatePositionCommandType, double> commands, CancellationToken cancellationToken = default)
     {
         foreach (var command in commands) 
         {
@@ -198,7 +198,7 @@ public abstract class StrategyBase
             // has open position?
             var position = await GetOpenPositionAsync();
 
-            if (position is not null && position.IsOpen)
+            if (position is not null && position.IsOpen())
             {
                 var builder = new UpdatePositionCommandBuilder();
                 await UpdatePositionAsync(candle, position, builder);

@@ -42,7 +42,7 @@ public sealed class _05_BacktestingTests_PerformanceResults
 
                 var marketPrice = await exchange.GetMarketPriceAsync();
 
-                var positionEquity = positions.Sum(p => (p.IsOpen ? p.GetUnrealizedPNL(marketPrice) : 0) + p.RealizedPNL);
+                var positionEquity = positions.Sum(p => (p.IsOpen() ? p.GetUnrealizedPNL(marketPrice) : 0) + p.RealizedPNL);
                 var totalFee = positions.Sum(p => p.Fee);
 
                 var expectedEquity = options.Value.InitialCash + positionEquity - totalFee;

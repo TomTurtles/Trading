@@ -60,9 +60,9 @@ public abstract class ExchangeBase : IExchange, IExchangeInitializable
     public abstract Task CancelOrdersAsync(List<Order> orders, CancellationToken cancellationToken = default);
 
     // Positions
-    public abstract Task<Position?> GetOpenPositionAsync(CancellationToken cancellationToken = default);
-    public abstract Task<IEnumerable<Position>> GetPositionsAsync(CancellationToken cancellationToken = default);
-    public abstract Task UpdatePositionAsync(string id, Action<Position> configure, CancellationToken cancellationToken = default);
+    public abstract Task<IPosition?> GetOpenPositionAsync(CancellationToken cancellationToken = default);
+    public abstract Task<IEnumerable<IPosition>> GetPositionsAsync(CancellationToken cancellationToken = default);
+    public abstract Task UpdatePositionAsync(string id, Action<IPosition> configure, CancellationToken cancellationToken = default);
     public abstract Task ClosePositionAsync(string id, double? executionPrice = null, CancellationToken cancellationToken = default);
     public abstract Task IncreasePositionAsync(string id, double size, double? executionPrice = null, CancellationToken cancellationToken = default);
     public abstract Task DecreasePositionAsync(string id, double size, double? executionPrice = null, CancellationToken cancellationToken = default);

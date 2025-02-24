@@ -16,11 +16,11 @@ public class OnBacktestingPerformanceResultEventArgs(
     public BacktestingPerformanceResult Backtesting { get; } = backtesting;
 
 }
-public class StrategyPerformanceResult(SortedDictionary<DateTime, Position> positionHistory)
+public class StrategyPerformanceResult(SortedDictionary<DateTime, IBacktestingPosition> positionHistory)
 {
-    private readonly IEnumerable<Position> _positions = positionHistory.Values;
-    private IEnumerable<Position> WinPositions => _positions.Where(p => p.RealizedPNL > 0); 
-    private IEnumerable<Position> LossPositions => _positions.Where(p => p.RealizedPNL < 0);
+    private readonly IEnumerable<IPosition> _positions = positionHistory.Values;
+    private IEnumerable<IPosition> WinPositions => _positions.Where(p => p.RealizedPNL > 0); 
+    private IEnumerable<IPosition> LossPositions => _positions.Where(p => p.RealizedPNL < 0);
 
     public double PositionsCount => _positions.Count();
     public TimeSpan AveragePositionLifetime => TimeSpan.FromSeconds(_positions.Average(p => p.Lifetime.TotalSeconds));

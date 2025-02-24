@@ -93,7 +93,7 @@ public sealed class _06_BacktestingTests_TakeProfit
 
         var closedPosition = positions[0];
         Assert.IsNotNull(closedPosition);
-        Assert.IsTrue(closedPosition.IsClosed);
+        Assert.IsTrue(closedPosition.IsClosed());
         Assert.IsNotNull(closedPosition.ExitOrders);
         Assert.AreEqual(1, closedPosition.ExitOrders.Count);
 
@@ -179,7 +179,7 @@ public sealed class _06_BacktestingTests_TakeProfit
 
         var openPosition = await positionManagement.GetOpenPositionAsync();
         Assert.IsNotNull(openPosition);
-        Assert.IsTrue(openPosition.IsOpen);
+        Assert.IsTrue(openPosition.IsOpen());
         Assert.IsNotNull(openPosition.ExitOrders);
         Assert.AreEqual(0, openPosition.ExitOrders.Count);
 
@@ -321,7 +321,7 @@ public sealed class _06_BacktestingTests_TakeProfit
 
         var closedPosition = positions[0];
         Assert.IsNotNull(closedPosition);
-        Assert.IsTrue(closedPosition.IsClosed);
+        Assert.IsTrue(closedPosition.IsClosed());
         Assert.IsNotNull(closedPosition.ExitOrders);
         Assert.AreEqual(1, closedPosition.ExitOrders.Count);
 
@@ -405,7 +405,7 @@ public sealed class _06_BacktestingTests_TakeProfit
 
         var openPosition = await positionManagement.GetOpenPositionAsync();
         Assert.IsNotNull(openPosition);
-        Assert.IsTrue(openPosition.IsOpen);
+        Assert.IsTrue(openPosition.IsOpen());
         Assert.IsNotNull(openPosition.ExitOrders);
         Assert.AreEqual(0, openPosition.ExitOrders.Count);
 
@@ -560,7 +560,7 @@ public sealed class _06_BacktestingTests_TakeProfit
 
         var closedPosition = positions[0];
         Assert.IsNotNull(closedPosition);
-        Assert.IsTrue(closedPosition.IsClosed);
+        Assert.IsTrue(closedPosition.IsClosed());
         Assert.IsNotNull(closedPosition.ExitOrders);
         Assert.AreEqual(1, closedPosition.ExitOrders.Count);
 
@@ -647,7 +647,7 @@ public sealed class _06_BacktestingTests_TakeProfit
 
         var openPosition = await positionManagement.GetOpenPositionAsync();
         Assert.IsNotNull(openPosition);
-        Assert.IsTrue(openPosition.IsOpen);
+        Assert.IsTrue(openPosition.IsOpen());
         Assert.IsNotNull(openPosition.ExitOrders);
         Assert.AreEqual(0, openPosition.ExitOrders.Count);
 
@@ -791,7 +791,7 @@ public sealed class _06_BacktestingTests_TakeProfit
 
         var closedPosition = positions[0];
         Assert.IsNotNull(closedPosition);
-        Assert.IsTrue(closedPosition.IsClosed);
+        Assert.IsTrue(closedPosition.IsClosed());
         Assert.IsNotNull(closedPosition.ExitOrders);
         Assert.AreEqual(1, closedPosition.ExitOrders.Count);
 
@@ -876,7 +876,7 @@ public sealed class _06_BacktestingTests_TakeProfit
 
         var openPosition = await positionManagement.GetOpenPositionAsync();
         Assert.IsNotNull(openPosition);
-        Assert.IsTrue(openPosition.IsOpen);
+        Assert.IsTrue(openPosition.IsOpen());
         Assert.IsNotNull(openPosition.ExitOrders);
         Assert.AreEqual(0, openPosition.ExitOrders.Count);
 

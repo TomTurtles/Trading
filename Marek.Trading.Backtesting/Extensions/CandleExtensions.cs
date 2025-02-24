@@ -1,7 +1,7 @@
-﻿namespace Marek.Trading.Core;
+﻿namespace Marek.Trading.Backtesting;
 public static class CandleExtensions
 {
-    public static bool IsTakeProfitHit(this Candle candle, Position? position)
+    public static bool IsTakeProfitHit(this Candle candle, BacktestingPositionDecorator? position)
     {
         if (position?.TakeProfitPrice is null) return false;
 
@@ -14,7 +14,7 @@ public static class CandleExtensions
             return position.TakeProfitPrice.Value >= candle.Low;
         }
     }
-    public static bool IsStopLossHit(this Candle candle, Position? position)
+    public static bool IsStopLossHit(this Candle candle, BacktestingPositionDecorator? position)
     {
         if (position?.StopLossPrice is null) return false;
 

@@ -15,11 +15,11 @@ public static class OrderExtensions
     {
         OrderSide.Buy => PositionSide.LONG,
         OrderSide.Sell => PositionSide.SHORT,
-        _ => throw new NotImplementedException()
+        _ => throw new NotImplementedException($"unknown side: {order.Side}")
     };
 
-    public static bool IsSameSideAs(this Order order, Position position) => order.ToPositionSide() == position.Side;
-    public static bool IsOppositeSideAs(this Order order, Position position) => order.ToPositionSide() != position.Side;
+    public static bool IsSameSideAs(this Order order, IPosition position) => order.ToPositionSide() == position.Side;
+    public static bool IsOppositeSideAs(this Order order, IPosition position) => order.ToPositionSide() != position.Side;
 
     public static bool CandleHit(this Order order, Candle candle)
     {

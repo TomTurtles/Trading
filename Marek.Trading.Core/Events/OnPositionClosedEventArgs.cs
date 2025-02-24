@@ -1,7 +1,7 @@
 ﻿namespace Marek.Trading.Core;
 
-public class OnPositionClosedEventArgs(DateTime timestamp, Position position) : EventArgs
+public class OnPositionClosedEventArgs(DateTime timestamp, IPosition position) : EventArgs
 {
     public DateTime Timestamp { get; } = timestamp;
-    public Position Position { get; } = position;
+    public IPosition Position { get; } = position;
 }

@@ -25,9 +25,9 @@ public interface IExchange
     #endregion Orders
 
     #region Positions
-    Task<Position?> GetOpenPositionAsync(CancellationToken cancellationToken = default);
-    Task<IEnumerable<Position>> GetPositionsAsync(CancellationToken cancellationToken = default);
-    Task UpdatePositionAsync(string id, Action<Position> configure, CancellationToken cancellationToken = default);
+    Task<IPosition?> GetOpenPositionAsync(CancellationToken cancellationToken = default);
+    Task<IEnumerable<IPosition>> GetPositionsAsync(CancellationToken cancellationToken = default);
+    Task UpdatePositionAsync(string id, Action<IPosition> configure, CancellationToken cancellationToken = default);
     Task ClosePositionAsync(string id, double? executionPrice = null, CancellationToken cancellationToken = default);
     Task IncreasePositionAsync(string id, double size, double? executionPrice = null, CancellationToken cancellationToken = default);
     Task DecreasePositionAsync(string id, double size, double? executionPrice = null, CancellationToken cancellationToken = default);

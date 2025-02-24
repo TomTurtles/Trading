@@ -29,10 +29,10 @@ public sealed class _02_BacktestingTests_Positions
         Assert.IsNotNull(position);
         Assert.AreEqual(PositionSide.LONG, position.Side);
         Assert.AreEqual(order.Symbol, position.Symbol);
-        Assert.AreEqual(1, position.Quantity);
+        Assert.AreEqual(order.Quantity, position.Quantity);
         Assert.AreEqual(PositionStatus.Open, position.Status);
-        Assert.IsTrue(position.IsOpen);
-        Assert.IsFalse(position.IsClosed);
+        Assert.IsTrue(position.IsOpen());
+        Assert.IsFalse(position.IsClosed());
         Assert.IsNull(position.ExitPrice);
         Assert.AreEqual(order.Quantity, position.Quantity);
         Assert.IsTrue(position.EntryOrders.Any());
@@ -70,8 +70,8 @@ public sealed class _02_BacktestingTests_Positions
         Assert.AreEqual(order.Symbol, position.Symbol);
         Assert.AreEqual(1, position.Quantity);
         Assert.AreEqual(PositionStatus.Open, position.Status);
-        Assert.IsTrue(position.IsOpen);
-        Assert.IsFalse(position.IsClosed);
+        Assert.IsTrue(position.IsOpen());
+        Assert.IsFalse(position.IsClosed());
         Assert.IsNull(position.ExitPrice);
         Assert.AreEqual(order.Quantity, position.Quantity);
         Assert.IsTrue(position.EntryOrders.Any());
@@ -135,8 +135,8 @@ public sealed class _02_BacktestingTests_Positions
         Assert.AreEqual(PositionStatus.Open, position.Status);
         Assert.AreEqual(order.Price, position.EntryPrice);
         Assert.AreEqual(order.Quantity * order.Price, position.GetValue(position.EntryPrice));
-        Assert.IsTrue(position.IsOpen);
-        Assert.IsFalse(position.IsClosed);
+        Assert.IsTrue(position.IsOpen());
+        Assert.IsFalse(position.IsClosed());
         Assert.IsNull(position.ExitPrice);
         Assert.AreEqual(order.Quantity, position.Quantity);
         Assert.IsTrue(position.EntryOrders.Any());
@@ -199,8 +199,8 @@ public sealed class _02_BacktestingTests_Positions
         Assert.AreEqual(order.Quantity, position.Quantity);
         Assert.AreEqual(PositionStatus.Open, position.Status);
         Assert.AreEqual(order.Price, position.EntryPrice);
-        Assert.IsTrue(position.IsOpen);
-        Assert.IsFalse(position.IsClosed);
+        Assert.IsTrue(position.IsOpen());
+        Assert.IsFalse(position.IsClosed());
         Assert.IsNull(position.ExitPrice);
         Assert.AreEqual(order.Quantity, position.Quantity);
         Assert.IsTrue(position.EntryOrders.Any());
@@ -269,8 +269,8 @@ public sealed class _02_BacktestingTests_Positions
         Assert.AreEqual(1, positions.Count);
 
         var position = positions[0];
-        Assert.IsTrue(position.IsClosed);
-        Assert.IsFalse(position.IsOpen);
+        Assert.IsTrue(position.IsClosed());
+        Assert.IsFalse(position.IsOpen());
         Assert.IsNotNull(position.ExitPrice);
         Assert.AreEqual(position.ExitQuantity, position.EntryQuantity);
         Assert.IsTrue(position.EntryOrders.Any());
@@ -336,8 +336,8 @@ public sealed class _02_BacktestingTests_Positions
         Assert.AreEqual(1, positions.Count);
 
         var position = positions[0];
-        Assert.IsTrue(position.IsClosed);
-        Assert.IsFalse(position.IsOpen);
+        Assert.IsTrue(position.IsClosed());
+        Assert.IsFalse(position.IsOpen());
         Assert.IsNotNull(position.ExitPrice);
         Assert.AreEqual(position.ExitQuantity, position.EntryQuantity);
         Assert.IsTrue(position.EntryOrders.Any());
@@ -403,8 +403,8 @@ public sealed class _02_BacktestingTests_Positions
         Assert.AreEqual(1, positions.Count);
 
         var position = positions[0];
-        Assert.IsFalse(position.IsClosed);
-        Assert.IsTrue(position.IsOpen);
+        Assert.IsFalse(position.IsClosed());
+        Assert.IsTrue(position.IsOpen());
         Assert.IsNotNull(position.ExitPrice);
         Assert.AreNotEqual(position.ExitQuantity, position.EntryQuantity);
         Assert.IsTrue(position.EntryOrders.Any());
@@ -472,8 +472,8 @@ public sealed class _02_BacktestingTests_Positions
         Assert.AreEqual(1, positions.Count);
 
         var position = positions[0];
-        Assert.IsFalse(position.IsClosed);
-        Assert.IsTrue(position.IsOpen);
+        Assert.IsFalse(position.IsClosed());
+        Assert.IsTrue(position.IsOpen());
         Assert.IsNotNull(position.ExitPrice);
         Assert.AreNotEqual(position.ExitQuantity, position.EntryQuantity);
         Assert.IsTrue(position.EntryOrders.Any());
@@ -563,7 +563,7 @@ public sealed class _02_BacktestingTests_Positions
     }
 
     [TestMethod]
-    public async Task _11_EstimatePNL_PartiallyClosedPosition_Long_ShouldWork()
+    public async Task _11_EstimatePNL_PartiallyclosedPosition_Long_ShouldWork()
     {
         // Arrange
         var exchange = _serviceProvider.GetService<IBacktestingExchange>();
@@ -609,7 +609,7 @@ public sealed class _02_BacktestingTests_Positions
     }
 
     [TestMethod]
-    public async Task _12_EstimatePNL_PartiallyClosedPosition_Short_ShouldWork()
+    public async Task _12_EstimatePNL_PartiallyclosedPosition_Short_ShouldWork()
     {
         // Arrange
         var exchange = _serviceProvider.GetService<IBacktestingExchange>();

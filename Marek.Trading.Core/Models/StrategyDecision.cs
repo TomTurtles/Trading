@@ -6,7 +6,7 @@ public class StrategyDecision(Candle candle, StrategyDecisionType type)
     public StrategyDecisionType Type { get; } = type;
     public Candle Candle { get; } = candle;
     public string? Reason { get; set; }
-    public Position? Position { get; set; }
+    public IPosition? Position { get; set; }
     public IEnumerable<UpdatePositionCommandType>? PositionUpdateCommands { get; set; }
     public Order? Order { get; set; }
     public List<Order>? Orders { get; set; }
@@ -17,12 +17,12 @@ public class StrategyDecision(Candle candle, StrategyDecisionType type)
         Reason = reason,
     };
 
-    internal static StrategyDecision ClosePosition(Candle candle, Position position) => new(candle, StrategyDecisionType.ClosePosition)
+    internal static StrategyDecision ClosePosition(Candle candle, IPosition position) => new(candle, StrategyDecisionType.ClosePosition)
     {
         Position = position
     };
 
-    internal static StrategyDecision UpdatePosition(Candle candle, Position position, IEnumerable<UpdatePositionCommandType> updateCommands) => new(candle, StrategyDecisionType.UpdatePosition)
+    internal static StrategyDecision UpdatePosition(Candle candle, IPosition position, IEnumerable<UpdatePositionCommandType> updateCommands) => new(candle, StrategyDecisionType.UpdatePosition)
     {
         Position = position,
         PositionUpdateCommands = updateCommands

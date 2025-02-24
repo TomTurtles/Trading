@@ -10,9 +10,9 @@ public class BacktestingPositionManagement : IBacktestingPositionManagement
     public IOptions<BacktestingOptions> Options { get; }
 
     // Management
-    private ConcurrentDictionary<DateTime, Position> PositionHistory { get; } = new(DateTimeEqualityComparer.Use());
-    private Dictionary<DateTime, Position> OrderedPositionHistory => new(PositionHistory.OrderBy(kvp => kvp.Key));
-    private IEnumerable<Position> Positions => OrderedPositionHistory.Values;
+    private ConcurrentDictionary<DateTime, IBacktestingPosition> PositionHistory { get; } = new(DateTimeEqualityComparer.Use());
+    private Dictionary<DateTime, IBacktestingPosition> OrderedPositionHistory => new(PositionHistory.OrderBy(kvp => kvp.Key));
+    private IEnumerable<IBacktestingPosition> Positions => OrderedPositionHistory.Values;
 
     public BacktestingPositionManagement(
         IMareatorEventDispatcher eventDispatcher,
@@ -28,31 +28,31 @@ public class BacktestingPositionManagement : IBacktestingPositionManagement
 
     #region Requests
 
-    public Task<Position?> GetOpenPositionAsync(CancellationToken cancellationToken = default)
+    public Task<IBacktestingPosition?> GetOpenPositionAsync(CancellationToken cancellationToken = default)
     {
-        var openPosition = Positions.SingleOrDefault(p => p.IsOpen) ?? null;
+        var openPosition = Positions.SingleOrDefault(p => p.IsOpen()) ?? null;
         return Task.FromResult(openPosition);
     }
-    public Task<Position?> GetPositionAsync(string id, CancellationToken cancellationToken = default)
+    public Task<IBacktestingPosition?> GetPositionAsync(string id, CancellationToken cancellationToken = default)
     {
         var openPosition = Positions.SingleOrDefault(p => p.Id == id) ?? null;
         return Task.FromResult(openPosition);
     }
-    public Task<List<Position>> GetPositionsAsync(CancellationToken cancellationToken = default)
+    public Task<List<IBacktestingPosition>> GetPositionsAsync(CancellationToken cancellationToken = default)
     {
         var positions = Positions.ToList();
         return Task.FromResult(positions);
     }
 
-    public Dictionary<DateTime, Position> GetHistory() => OrderedPositionHistory;
+    public Dictionary<DateTime, IBacktestingPosition> GetHistory() => OrderedPositionHistory;
 
     #endregion Requests
 
     #region Commands
 
-    public Task UpdatePositionAsync(string id, Action<Position> configure, CancellationToken cancellationToken = default)
+    public Task UpdatePositionAsync(string id, Action<IBacktestingPosition> configure, CancellationToken cancellationToken = default)
     {
-        var position = Positions.SingleOrDefault(p => p.IsOpen) ?? throw new NullReferenceException("only open positions can be updated.");
+        var position = Positions.SingleOrDefault(p => p.IsOpen()) ?? throw new NullReferenceException("only open positions can be updated.");
         configure?.Invoke(position);
         return Task.CompletedTask;
     }
@@ -72,12 +72,12 @@ public class BacktestingPositionManagement : IBacktestingPositionManagement
         if (order.ExecutedPrice is null) throw new InvalidOperationException($"must have {nameof(order.ExecutedPrice)} != null to update positions");
         if (order.ExecutedFee is null) throw new InvalidOperationException($"must have {nameof(order.ExecutedFee)} != null to update positions");
 
-        var position = Positions.SingleOrDefault(p => p.IsOpen);
+        var position = Positions.SingleOrDefault(p => p.IsOpen());
 
         if (position == null)
         {
             // add
-            position = Position.CreateFromOrder(order);
+            position = CreatePositionFromOrder(order);
             var success = PositionHistory.TryAdd(timestamp, position);
             if (!success) 
             {
@@ -100,8 +100,8 @@ public class BacktestingPositionManagement : IBacktestingPositionManagement
                 // In diesem Fall müsste alles Cash-Relevante über die PlaceOrder Logik gelaufen sein
             }
 
-            if (position.IsClosed) NotifyPositionClosed(timestamp, position);
-            if (position.IsOpen) NotifyPositionUpdated(timestamp, position);
+            if (position.IsClosed()) NotifyPositionClosed(timestamp, position);
+            if (position.IsOpen()) NotifyPositionUpdated(timestamp, position);
         }
 
         // always: fee reducing cash
@@ -115,19 +115,38 @@ public class BacktestingPositionManagement : IBacktestingPositionManagement
 
     #region Notifications
 
-    public void NotifyPositionOpened(DateTime timestamp, Position position)
+    public void NotifyPositionOpened(DateTime timestamp, IBacktestingPosition position)
     {
         EventDispatcher.Publish(this, new OnPositionOpenedEventArgs(timestamp, position));
     }
-    public void NotifyPositionUpdated(DateTime timestamp, Position position)
+    public void NotifyPositionUpdated(DateTime timestamp, IBacktestingPosition position)
     {
         EventDispatcher.Publish(this, new OnPositionUpdatedEventArgs(timestamp, position));
     }
-    public void NotifyPositionClosed(DateTime timestamp, Position position)
+    public void NotifyPositionClosed(DateTime timestamp, IBacktestingPosition position)
     {
         EventDispatcher.Publish(this, new OnPositionClosedEventArgs(timestamp, position));
     }
 
     #endregion Notifications
 
+
+    private static IBacktestingPosition CreatePositionFromOrder(Order order)
+    {
+        if (order.Quantity <= 0) throw new InvalidOperationException($"invalid quantity: '{order.Quantity}'");
+
+        var position = new Position()
+        {
+            Symbol = order.Symbol,
+            Side = order.ToPositionSide(),
+            StopLossPrice = order.StopLossPrice,
+            TakeProfitPrice = order.TakeProfitPrice,
+        };
+
+        var backtestingPosition = new BacktestingPositionDecorator(position);
+
+        backtestingPosition.AddExecutedOrder(order);
+
+        return backtestingPosition;
+    }
 }

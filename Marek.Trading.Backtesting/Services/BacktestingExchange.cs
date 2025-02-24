@@ -75,11 +75,11 @@ public class BacktestingExchange : ExchangeBase, IBacktestingExchange
     {
         return await OrderManagement.GetPendingOrdersAsync(cancellationToken);
     }
-    public override async Task<Position?> GetOpenPositionAsync(CancellationToken cancellationToken = default)
+    public override async Task<IPosition?> GetOpenPositionAsync(CancellationToken cancellationToken = default)
     {
         return await PositionManagement.GetOpenPositionAsync(cancellationToken);
     }
-    public override async Task<IEnumerable<Position>> GetPositionsAsync(CancellationToken cancellationToken = default)
+    public override async Task<IEnumerable<IPosition>> GetPositionsAsync(CancellationToken cancellationToken = default)
     {
         return await PositionManagement.GetPositionsAsync(cancellationToken);
     }
@@ -93,7 +93,7 @@ public class BacktestingExchange : ExchangeBase, IBacktestingExchange
         var orders = await GetPendingOrdersAsync(cancellationToken);
         result += orders.Sum(o => o.GetValue());
 
-        var openPosition = await GetOpenPositionAsync();
+        var openPosition = (BacktestingPositionDecorator?)(await GetOpenPositionAsync());
         if (openPosition == null) return result;
 
         // Realised PNL schlagen sich bereits im Margin nieder
@@ -137,7 +137,7 @@ public class BacktestingExchange : ExchangeBase, IBacktestingExchange
         await Task.WhenAll(tasks.ToArray());
     }
 
-    public override async Task UpdatePositionAsync(string id, Action<Position> configure, CancellationToken cancellationToken = default)
+    public override async Task UpdatePositionAsync(string id, Action<IPosition> configure, CancellationToken cancellationToken = default)
     {
         await PositionManagement.UpdatePositionAsync(id, configure, cancellationToken);
     }
@@ -147,7 +147,7 @@ public class BacktestingExchange : ExchangeBase, IBacktestingExchange
         executionPrice ??= await GetMarketPriceAsync();
 
         // aktuelle (offene) Position holen
-        var positionToLiquidate = await GetOpenPositionAsync() ?? throw new NullReferenceException(nameof(GetOpenPositionAsync));
+        var positionToLiquidate = (BacktestingPositionDecorator?)await GetOpenPositionAsync() ?? throw new NullReferenceException(nameof(GetOpenPositionAsync));
 
         // Liquiditäts-Order erstellen
         var liquidationOrder = new Order(positionToLiquidate.Side.ToOppositeOrderSide(), positionToLiquidate.Symbol)
@@ -256,9 +256,9 @@ public class BacktestingExchange : ExchangeBase, IBacktestingExchange
     {
         var candle = await GetCandleAsync();
 
-        var position = await GetOpenPositionAsync();
+        var position = (BacktestingPositionDecorator?)await GetOpenPositionAsync();
         if (position is null) return;
-        if (position.IsClosed) return;
+        if (position.IsClosed()) return;
 
         // takeprofit
         if (position.TakeProfitPrice is not null && candle.IsTakeProfitHit(position))
@@ -266,7 +266,7 @@ public class BacktestingExchange : ExchangeBase, IBacktestingExchange
             await ClosePositionAsync(position.Id, position.TakeProfitPrice.Value);
         }
 
-        if (position.IsClosed) return;
+        if (position.IsClosed()) return;
 
         // stoploss
         if (position.StopLossPrice is not null && candle.IsStopLossHit(position))

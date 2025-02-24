@@ -76,7 +76,7 @@ public class BacktestingEngine : IBacktestingEngine
     private async Task CloseLastOpenPositionAsync(CancellationToken cancellationToken)
     {
         var openPosition = await Exchange.GetOpenPositionAsync();
-        if (openPosition is not null && openPosition.IsOpen)
+        if (openPosition is not null && openPosition.IsOpen())
         {
             await Exchange.ClosePositionAsync(openPosition.Id, null, cancellationToken);
         }
