@@ -80,7 +80,7 @@ public sealed class _05_BacktestingTests_PerformanceResults
     //    var candle = CandleHelper.Random(DateTime.Now);
     //    exchange.SetCandle(candle);
 
-    //    var order = Order.CreateShort("BTC_USDT");
+    //    var order = OrderBuilder.CreateShort("BTC_USDT");
     //    order.Quantity = 7;
 
     //    // Act
@@ -114,7 +114,7 @@ public sealed class _05_BacktestingTests_PerformanceResults
     //    var candle = CandleHelper.Random(DateTime.Now);
     //    exchange.SetCandle(candle);
 
-    //    var order = Order.CreateLong("BTC_USDT");
+    //    var order = OrderBuilder.CreateLong("BTC_USDT");
     //    order.Quantity = 4;
     //    order.Price = candle.Close * .9;
 
@@ -148,7 +148,7 @@ public sealed class _05_BacktestingTests_PerformanceResults
     //    var candle = CandleHelper.Random(DateTime.Now);
     //    exchange.SetCandle(candle);
 
-    //    var order = Order.CreateShort("BTC_USDT");
+    //    var order = OrderBuilder.CreateShort("BTC_USDT");
     //    order.Quantity = 3;
     //    order.Price = candle.Close * 1.02;
 
@@ -191,7 +191,7 @@ public sealed class _05_BacktestingTests_PerformanceResults
     //    exchange.SetCandle(inputCandles[0]);
 
     //    // Limit Order
-    //    var order = Order.CreateLong("BTC_USDT");
+    //    var order = OrderBuilder.CreateLong("BTC_USDT");
     //    order.Quantity = 1;
     //    order.Price = 3.5;
     //    order.Lever = 1;
@@ -205,7 +205,7 @@ public sealed class _05_BacktestingTests_PerformanceResults
     //    }
 
     //    // Closing Market Order
-    //    var closingOrder = Order.CreateShort("BTC_USDT");
+    //    var closingOrder = OrderBuilder.CreateShort("BTC_USDT");
     //    closingOrder.Quantity = order.Quantity;
     //    closingOrder.Lever = order.Lever;
     //    await exchange.PlaceOrderAsync(closingOrder);
@@ -261,7 +261,7 @@ public sealed class _05_BacktestingTests_PerformanceResults
     //    exchange.SetCandle(inputCandles[0]);
 
     //    // Limit Order
-    //    var order = Order.CreateShort("BTC_USDT");
+    //    var order = OrderBuilder.CreateShort("BTC_USDT");
     //    order.Quantity = (new Random().NextDouble() + 1) * 4;
     //    order.Price = 5.5;
     //    order.Lever = (new Random().NextDouble() + 1) * 4;
@@ -295,7 +295,7 @@ public sealed class _05_BacktestingTests_PerformanceResults
     //    Assert.AreEqual(expectedCashAfterFirstExecutedOrder, margin);
 
     //    // Closing Market Order
-    //    var closingOrder = Order.CreateLong("BTC_USDT");
+    //    var closingOrder = OrderBuilder.CreateLong("BTC_USDT");
     //    closingOrder.Quantity = order.Quantity;
     //    closingOrder.Lever = order.Lever;
     //    await exchange.PlaceOrderAsync(closingOrder);
@@ -338,7 +338,7 @@ public sealed class _05_BacktestingTests_PerformanceResults
     //    exchange.SetCandle(inputCandles[0]);
 
     //    // Limit Order
-    //    var order = Order.CreateLong("BTC_USDT");
+    //    var order = OrderBuilder.CreateLong("BTC_USDT");
     //    order.Quantity = 1;
     //    order.Price = 6;
     //    order.Lever = 1;
@@ -352,7 +352,7 @@ public sealed class _05_BacktestingTests_PerformanceResults
     //    }
 
     //    // Closing Market Order
-    //    var closingOrder = Order.CreateShort("BTC_USDT");
+    //    var closingOrder = OrderBuilder.CreateShort("BTC_USDT");
     //    closingOrder.Quantity = order.Quantity;
     //    closingOrder.Lever = order.Lever;
     //    await exchange.PlaceOrderAsync(closingOrder);
@@ -403,7 +403,7 @@ public sealed class _05_BacktestingTests_PerformanceResults
     //    exchange.SetCandle(inputCandles[0]);
 
     //    // Limit Order
-    //    var order = Order.CreateShort("BTC_USDT");
+    //    var order = OrderBuilder.CreateShort("BTC_USDT");
     //    order.Quantity = 1;
     //    order.Price = 6;
     //    order.Lever = 1;
@@ -417,7 +417,7 @@ public sealed class _05_BacktestingTests_PerformanceResults
     //    }
 
     //    // Closing Market Order
-    //    var closingOrder = Order.CreateLong("BTC_USDT");
+    //    var closingOrder = OrderBuilder.CreateLong("BTC_USDT");
     //    closingOrder.Quantity = order.Quantity;
     //    closingOrder.Lever = order.Lever;
     //    await exchange.PlaceOrderAsync(closingOrder);

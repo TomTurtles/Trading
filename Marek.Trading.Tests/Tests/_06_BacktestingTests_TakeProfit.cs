@@ -62,15 +62,18 @@ public sealed class _06_BacktestingTests_TakeProfit
         exchange.SetCandle(inputCandles[0]);
 
         // Market Order
-        var order = Order.CreateLong("BTC_USDT");
+        var order = OrderBuilder.CreateLong("BTC_USDT");
         order.Quantity = quantity;
         order.Lever = lever;
         order.TakeProfitPrice = takeProfitPrice;
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
+
+        var openingOrder = await orderManagement.GetOrderAsync(orderId);
+        Assert.IsNotNull(openingOrder);
 
         // Assert expected Margin after first Order Placement
         var margin = await cashManagement.GetMarginAsync();
-        var expectedMarginAfterOrderPlacement = options.Value.InitialCash - (order.Quantity * order.ExecutedPrice!.Value) - order.ExecutedFee!.Value;
+        var expectedMarginAfterOrderPlacement = options.Value.InitialCash - (openingOrder.Quantity * openingOrder.ExecutedPrice!.Value) - openingOrder.ExecutedFee!.Value;
         Assert.AreEqual(Math.Round(expectedMarginAfterOrderPlacement, 8), Math.Round(margin, 8));
 
         // Run Candles
@@ -103,8 +106,8 @@ public sealed class _06_BacktestingTests_TakeProfit
         Assert.AreEqual(order.TakeProfitPrice, closingOrder.ExecutedPrice);
 
         margin = await cashManagement.GetMarginAsync();
-        var diff = (closingOrder.ExecutedPrice!.Value * closingOrder.Quantity) - (order.Quantity * order.ExecutedPrice!.Value);
-        var expectedMarginAfterCandleRun = options.Value.InitialCash + diff * lever - order.ExecutedFee!.Value - closingOrder.ExecutedFee!.Value;
+        var diff = (closingOrder.ExecutedPrice!.Value * closingOrder.Quantity) - (openingOrder.Quantity * openingOrder.ExecutedPrice!.Value);
+        var expectedMarginAfterCandleRun = options.Value.InitialCash + diff * lever - openingOrder.ExecutedFee!.Value - closingOrder.ExecutedFee!.Value;
         Assert.AreEqual(Math.Round(expectedMarginAfterCandleRun, 8), Math.Round(margin, 8));
 
         // Mit Gewinn
@@ -155,15 +158,18 @@ public sealed class _06_BacktestingTests_TakeProfit
         exchange.SetCandle(inputCandles[0]);
 
         // Market Order
-        var order = Order.CreateLong("BTC_USDT");
+        var order = OrderBuilder.CreateLong("BTC_USDT");
         order.Quantity = quantity;
         order.Lever = lever;
         order.TakeProfitPrice = takeProfitPrice;
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
+
+        var openingOrder = await orderManagement.GetOrderAsync(orderId);
+        Assert.IsNotNull(openingOrder);
 
         // Assert expected Margin after first Order Placement
         var margin = await cashManagement.GetMarginAsync();
-        var expectedMarginAfterOrderPlacement = options.Value.InitialCash - (order.Quantity * order.ExecutedPrice!.Value) - order.ExecutedFee!.Value;
+        var expectedMarginAfterOrderPlacement = options.Value.InitialCash - (openingOrder.Quantity * openingOrder.ExecutedPrice!.Value) - openingOrder.ExecutedFee!.Value;
         Assert.AreEqual(Math.Round(expectedMarginAfterOrderPlacement, 8), Math.Round(margin, 8));
 
         // Run Candles
@@ -231,7 +237,7 @@ public sealed class _06_BacktestingTests_TakeProfit
         exchange.SetCandle(inputCandles[0]);
 
         // Market Order
-        var order = Order.CreateLong("BTC_USDT");
+        var order = OrderBuilder.CreateLong("BTC_USDT");
         order.Quantity = quantity;
         order.Lever = lever;
         order.TakeProfitPrice = takeProfitPrice;
@@ -290,15 +296,18 @@ public sealed class _06_BacktestingTests_TakeProfit
         exchange.SetCandle(inputCandles[0]);
 
         // Market Order
-        var order = Order.CreateShort("BTC_USDT");
+        var order = OrderBuilder.CreateShort("BTC_USDT");
         order.Quantity = quantity;
         order.Lever = lever;
         order.TakeProfitPrice = takeProfitPrice;
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
+
+        var openingOrder = await orderManagement.GetOrderAsync(orderId);
+        Assert.IsNotNull(openingOrder);
 
         // Assert expected Margin after first Order Placement
         var margin = await cashManagement.GetMarginAsync();
-        var expectedMarginAfterOrderPlacement = options.Value.InitialCash - (order.Quantity * order.ExecutedPrice!.Value) - order.ExecutedFee!.Value;
+        var expectedMarginAfterOrderPlacement = options.Value.InitialCash - (openingOrder.Quantity * openingOrder.ExecutedPrice!.Value) - openingOrder.ExecutedFee!.Value;
         Assert.AreEqual(Math.Round(expectedMarginAfterOrderPlacement, 8), Math.Round(margin, 8));
 
         // Run Candles
@@ -331,8 +340,8 @@ public sealed class _06_BacktestingTests_TakeProfit
         Assert.AreEqual(order.TakeProfitPrice, closingOrder.ExecutedPrice);
 
         margin = await cashManagement.GetMarginAsync();
-        var diff = (closingOrder.ExecutedPrice!.Value * closingOrder.Quantity) - (order.Quantity * order.ExecutedPrice!.Value);
-        var expectedMarginAfterCandleRun = options.Value.InitialCash + (-1) * diff * lever - order.ExecutedFee!.Value - closingOrder.ExecutedFee!.Value;
+        var diff = (closingOrder.ExecutedPrice!.Value * closingOrder.Quantity) - (openingOrder.Quantity * openingOrder.ExecutedPrice!.Value);
+        var expectedMarginAfterCandleRun = options.Value.InitialCash + (-1) * diff * lever - openingOrder.ExecutedFee!.Value - closingOrder.ExecutedFee!.Value;
         Assert.AreEqual(Math.Round(expectedMarginAfterCandleRun, 8), Math.Round(margin, 8));
 
         // Mit Gewinn
@@ -381,15 +390,18 @@ public sealed class _06_BacktestingTests_TakeProfit
         exchange.SetCandle(inputCandles[0]);
 
         // Market Order
-        var order = Order.CreateShort("BTC_USDT");
+        var order = OrderBuilder.CreateShort("BTC_USDT");
         order.Quantity = quantity;
         order.Lever = lever;
         order.TakeProfitPrice = takeProfitPrice;
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
+
+        var openingOrder = await orderManagement.GetOrderAsync(orderId);
+        Assert.IsNotNull(openingOrder);
 
         // Assert expected Margin after first Order Placement
         var margin = await cashManagement.GetMarginAsync();
-        var expectedMarginAfterOrderPlacement = options.Value.InitialCash - (order.Quantity * order.ExecutedPrice!.Value) - order.ExecutedFee!.Value;
+        var expectedMarginAfterOrderPlacement = options.Value.InitialCash - (openingOrder.Quantity * openingOrder.ExecutedPrice!.Value) - openingOrder.ExecutedFee!.Value;
         Assert.AreEqual(Math.Round(expectedMarginAfterOrderPlacement, 8), Math.Round(margin, 8));
 
         // Run Candles
@@ -457,7 +469,7 @@ public sealed class _06_BacktestingTests_TakeProfit
         exchange.SetCandle(inputCandles[0]);
 
         // Market Order
-        var order = Order.CreateShort("BTC_USDT");
+        var order = OrderBuilder.CreateShort("BTC_USDT");
         order.Quantity = quantity;
         order.Lever = lever;
         order.TakeProfitPrice = takeProfitPrice;
@@ -533,12 +545,15 @@ public sealed class _06_BacktestingTests_TakeProfit
         exchange.SetCandle(inputCandles[0]);
 
         // Limit Order
-        var order = Order.CreateLong("BTC_USDT");
+        var order = OrderBuilder.CreateLong("BTC_USDT");
         order.Quantity = quantity;
         order.Lever = lever;
         order.Price = price;
         order.TakeProfitPrice = takeProfitPrice;
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
+
+        var openingOrder = await orderManagement.GetOrderAsync(orderId);
+        Assert.IsNotNull(openingOrder);
 
         // Run Candles
         foreach (var candle in inputCandles)
@@ -571,8 +586,8 @@ public sealed class _06_BacktestingTests_TakeProfit
         Assert.AreEqual(order.TakeProfitPrice, closingOrder.ExecutedPrice);
 
         var margin = await cashManagement.GetMarginAsync();
-        var diff = (closingOrder.ExecutedPrice!.Value * closingOrder.Quantity) - (order.Quantity * order.ExecutedPrice!.Value);
-        var expectedMarginAfterCandleRun = options.Value.InitialCash + diff * lever - order.ExecutedFee!.Value - closingOrder.ExecutedFee!.Value;
+        var diff = (closingOrder.ExecutedPrice!.Value * closingOrder.Quantity) - (openingOrder.Quantity * openingOrder.ExecutedPrice!.Value);
+        var expectedMarginAfterCandleRun = options.Value.InitialCash + diff * lever - openingOrder.ExecutedFee!.Value - closingOrder.ExecutedFee!.Value;
         Assert.AreEqual(Math.Round(expectedMarginAfterCandleRun, 8), Math.Round(margin, 8));
 
         // Mit Gewinn
@@ -627,12 +642,15 @@ public sealed class _06_BacktestingTests_TakeProfit
         exchange.SetCandle(inputCandles[0]);
 
         // Market Order
-        var order = Order.CreateLong("BTC_USDT");
+        var order = OrderBuilder.CreateLong("BTC_USDT");
         order.Quantity = quantity;
         order.Lever = lever;
         order.Price = price;
         order.TakeProfitPrice = takeProfitPrice;
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
+
+        var openingOrder = await orderManagement.GetOrderAsync(orderId);
+        Assert.IsNotNull(openingOrder);
 
         // Run Candles
         foreach (var candle in inputCandles)
@@ -652,7 +670,7 @@ public sealed class _06_BacktestingTests_TakeProfit
         Assert.AreEqual(0, openPosition.ExitOrders.Count);
 
         var margin = await cashManagement.GetMarginAsync();
-        var expectedMarginAfterCandleRun = options.Value.InitialCash - (order.Quantity * order.ExecutedPrice!.Value) - order.ExecutedFee!.Value;
+        var expectedMarginAfterCandleRun = options.Value.InitialCash - (openingOrder.Quantity * openingOrder.ExecutedPrice!.Value) - openingOrder.ExecutedFee!.Value;
         Assert.AreEqual(Math.Round(expectedMarginAfterCandleRun, 8), Math.Round(margin, 8));
     }
 
@@ -706,7 +724,7 @@ public sealed class _06_BacktestingTests_TakeProfit
         exchange.SetCandle(inputCandles[0]);
 
         // Market Order
-        var order = Order.CreateLong("BTC_USDT");
+        var order = OrderBuilder.CreateLong("BTC_USDT");
         order.Quantity = quantity;
         order.Lever = lever;
         order.Price = price;
@@ -764,12 +782,15 @@ public sealed class _06_BacktestingTests_TakeProfit
         exchange.SetCandle(inputCandles[0]);
 
         // Market Order
-        var order = Order.CreateShort("BTC_USDT");
+        var order = OrderBuilder.CreateShort("BTC_USDT");
         order.Quantity = quantity;
         order.Lever = lever;
         order.Price = price;
         order.TakeProfitPrice = takeProfitPrice;
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
+
+        var openingOrder = await orderManagement.GetOrderAsync(orderId);
+        Assert.IsNotNull(openingOrder);
 
         // Run Candles
         foreach (var candle in inputCandles)
@@ -801,8 +822,8 @@ public sealed class _06_BacktestingTests_TakeProfit
         Assert.AreEqual(order.TakeProfitPrice, closingOrder.ExecutedPrice);
 
         var margin = await cashManagement.GetMarginAsync();
-        var diff = (closingOrder.ExecutedPrice!.Value * closingOrder.Quantity) - (order.Quantity * order.ExecutedPrice!.Value);
-        var expectedMarginAfterCandleRun = options.Value.InitialCash + (-1) * diff * lever - order.ExecutedFee!.Value - closingOrder.ExecutedFee!.Value;
+        var diff = (closingOrder.ExecutedPrice!.Value * closingOrder.Quantity) - (openingOrder.Quantity * openingOrder.ExecutedPrice!.Value);
+        var expectedMarginAfterCandleRun = options.Value.InitialCash + (-1) * diff * lever - openingOrder.ExecutedFee!.Value - closingOrder.ExecutedFee!.Value;
         Assert.AreEqual(Math.Round(expectedMarginAfterCandleRun, 8), Math.Round(margin, 8));
 
         // Mit Gewinn
@@ -856,12 +877,15 @@ public sealed class _06_BacktestingTests_TakeProfit
         exchange.SetCandle(inputCandles[0]);
 
         // Market Order
-        var order = Order.CreateShort("BTC_USDT");
+        var order = OrderBuilder.CreateShort("BTC_USDT");
         order.Quantity = quantity;
         order.Lever = lever;
         order.Price = price;
         order.TakeProfitPrice = takeProfitPrice;
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
+
+        var openingOrder = await orderManagement.GetOrderAsync(orderId);
+        Assert.IsNotNull(openingOrder);
 
         // Run Candles
         foreach (var candle in inputCandles)
@@ -881,7 +905,7 @@ public sealed class _06_BacktestingTests_TakeProfit
         Assert.AreEqual(0, openPosition.ExitOrders.Count);
 
         var margin = await cashManagement.GetMarginAsync();
-        var expectedMarginAfterCandleRun = options.Value.InitialCash - (order.Quantity * order.ExecutedPrice!.Value) - order.ExecutedFee!.Value;
+        var expectedMarginAfterCandleRun = options.Value.InitialCash - (openingOrder.Quantity * openingOrder.ExecutedPrice!.Value) - openingOrder.ExecutedFee!.Value;
         Assert.AreEqual(Math.Round(expectedMarginAfterCandleRun, 8), Math.Round(margin, 8));
     }
 
@@ -931,7 +955,7 @@ public sealed class _06_BacktestingTests_TakeProfit
         exchange.SetCandle(inputCandles[0]);
 
         // Market Order
-        var order = Order.CreateShort("BTC_USDT");
+        var order = OrderBuilder.CreateShort("BTC_USDT");
         order.Quantity = quantity;
         order.Lever = lever;
         order.Price = price;

@@ -57,8 +57,8 @@ public abstract class StrategyBase
     // Orders
     public abstract Task<bool> ShouldLongAsync(Candle candle);
     public abstract Task<bool> ShouldShortAsync(Candle candle);
-    public abstract Task GoLongAsync(Candle candle, Order order);
-    public abstract Task GoShortAsync(Candle candle, Order order);
+    public abstract Task GoLongAsync(Candle candle, IOrder order);
+    public abstract Task GoShortAsync(Candle candle, IOrder order);
     public virtual Task<bool> ShouldCancelOrdersAsync(Candle candle) => Task.FromResult(false);
 
     // Positions
@@ -79,11 +79,11 @@ public abstract class StrategyBase
     {
         return await Exchange.GetOpenPositionAsync(cancellationToken);
     }
-    protected async Task<List<Order>> GetPendingOrdersAsync(CancellationToken cancellationToken = default)
+    protected async Task<List<IOrder>> GetPendingOrdersAsync(CancellationToken cancellationToken = default)
     {
         return await Exchange.GetPendingOrdersAsync(cancellationToken);
     }
-    protected async Task<List<Order>> GetOrdersAsync(CancellationToken cancellationToken = default)
+    protected async Task<List<IOrder>> GetOrdersAsync(CancellationToken cancellationToken = default)
     {
         return await Exchange.GetOrdersAsync(cancellationToken);
     }
@@ -154,12 +154,12 @@ public abstract class StrategyBase
     {
         return await Task.Run(() => StrategyDecision.Wait(candle, reason), cancellationToken);
     }
-    private async Task<StrategyDecision> CancelOrdersAsync(Candle candle, List<Order> orders, CancellationToken cancellationToken = default)
+    private async Task<StrategyDecision> CancelOrdersAsync(Candle candle, List<IOrder> orders, CancellationToken cancellationToken = default)
     {
         await Exchange.CancelOrdersAsync(orders, cancellationToken);
         return StrategyDecision.CancelOrders(candle, orders);
     }
-    private async Task<StrategyDecision> PlaceOrderAsync(Candle candle, Order order, CancellationToken cancellationToken = default)
+    private async Task<StrategyDecision> PlaceOrderAsync(Candle candle, IOrder order, CancellationToken cancellationToken = default)
     {
         await Exchange.PlaceOrderAsync(order, cancellationToken);
         return order.Side == OrderSide.Buy
@@ -234,13 +234,13 @@ public abstract class StrategyBase
             // should open new position?
             if (await ShouldLongAsync(candle))
             {
-                var order = Order.CreateLong(Symbol, Lever);
+                var order = OrderBuilder.CreateLong(Symbol, Lever);
                 await GoLongAsync(candle, order);
                 return await PlaceOrderAsync(candle, order);
             }
             else if (await ShouldShortAsync(candle))
             {
-                var order = Order.CreateShort(Symbol, Lever);
+                var order = OrderBuilder.CreateShort(Symbol, Lever);
                 await GoShortAsync(candle, order);
                 return await PlaceOrderAsync(candle, order);
             }

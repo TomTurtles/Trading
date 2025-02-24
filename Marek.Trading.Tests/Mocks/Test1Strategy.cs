@@ -3,12 +3,12 @@ public class Test1Strategy : StrategyBase
 {
     public override string Name => "test1";
 
-    public override async Task GoLongAsync(Candle candle, Order order)
+    public override async Task GoLongAsync(Candle candle, IOrder order)
     {
         order.Quantity = 1;
     }
 
-    public override async Task GoShortAsync(Candle candle, Order order)
+    public override async Task GoShortAsync(Candle candle, IOrder order)
     {
         order.Quantity = 1;
     }

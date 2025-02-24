@@ -2,9 +2,9 @@
 
 public interface IBacktestingPosition : IPosition
 {
-    IReadOnlyList<Order> EntryOrders { get; }
-    IReadOnlyList<Order> ExitOrders { get; }
-    IReadOnlyList<Order> OrderedEntryOrders { get; }
-    IReadOnlyList<Order> OrderedExitOrders { get; }
-    void AddExecutedOrder(Order order);
+    IReadOnlyList<IOrder> EntryOrders { get; }
+    IReadOnlyList<IOrder> ExitOrders { get; }
+    IReadOnlyList<IOrder> OrderedEntryOrders { get; }
+    IReadOnlyList<IOrder> OrderedExitOrders { get; }
+    void AddExecutedOrder(IOrder order);
 }

@@ -7,5 +7,5 @@ public interface IBacktestingPositionManagement
     Task<List<IBacktestingPosition>> GetPositionsAsync(CancellationToken cancellationToken = default);
     Dictionary<DateTime, IBacktestingPosition> GetHistory();
     Task UpdatePositionAsync(string id, Action<IBacktestingPosition> configure, CancellationToken cancellationToken = default);
-    Task UpdatePositionByExecutedOrderAsync(DateTime timestamp, Order order, CancellationToken cancellationToken = default);
+    Task UpdatePositionByExecutedOrderAsync(DateTime timestamp, IBacktestingOrder order, CancellationToken cancellationToken = default);
 }

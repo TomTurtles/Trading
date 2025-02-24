@@ -15,15 +15,21 @@ public sealed class _03_BacktestingTests_Cash
         var candle = CandleHelper.Random(DateTime.Now);
         exchange.SetCandle(candle);
 
-        var order = Order.CreateLong("BTC_USDT");
+        var order = OrderBuilder.CreateLong("BTC_USDT");
         order.Quantity = 3;
 
         // Market Order
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
 
         // Assert
-        Assert.AreEqual(candle.Close, order.ExecutedPrice);
-        Assert.AreEqual(candle.Timestamp, order.ExecutedTime);
+        var orderManagement = _serviceProvider.GetService<IBacktestingOrderManagement>();
+        Assert.IsNotNull(orderManagement);
+
+        var createdOrder = await orderManagement.GetOrderAsync(orderId);
+        Assert.IsNotNull(createdOrder);
+
+        Assert.AreEqual(candle.Close, createdOrder.ExecutedPrice);
+        Assert.AreEqual(candle.Timestamp, createdOrder.ExecutedTime);
 
         var positionManagement = _serviceProvider.GetService<IBacktestingPositionManagement>();
         Assert.IsNotNull(positionManagement);
@@ -38,7 +44,7 @@ public sealed class _03_BacktestingTests_Cash
         Assert.IsNotNull(options);
 
         var margin = await cashManagement.GetMarginAsync();
-        var expectedMargin = options.Value.InitialCash - order.GetValue() - order.ExecutedFee;
+        var expectedMargin = options.Value.InitialCash - createdOrder.GetValue() - createdOrder.ExecutedFee;
         Assert.AreEqual(Math.Round(expectedMargin!.Value, 6), Math.Round(margin, 6));
     }
 
@@ -52,15 +58,21 @@ public sealed class _03_BacktestingTests_Cash
         var candle = CandleHelper.Random(DateTime.Now);
         exchange.SetCandle(candle);
 
-        var order = Order.CreateShort("BTC_USDT");
+        var order = OrderBuilder.CreateShort("BTC_USDT");
         order.Quantity = 7;
 
         // Act
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
 
         // Assert
-        Assert.AreEqual(candle.Close, order.ExecutedPrice);
-        Assert.AreEqual(candle.Timestamp, order.ExecutedTime);
+        var orderManagement = _serviceProvider.GetService<IBacktestingOrderManagement>();
+        Assert.IsNotNull(orderManagement);
+
+        var createdOrder = await orderManagement.GetOrderAsync(orderId);
+        Assert.IsNotNull(createdOrder);
+
+        Assert.AreEqual(candle.Close, createdOrder.ExecutedPrice);
+        Assert.AreEqual(candle.Timestamp, createdOrder.ExecutedTime);
 
         var positionManagement = _serviceProvider.GetService<IBacktestingPositionManagement>();
         Assert.IsNotNull(positionManagement);
@@ -75,7 +87,7 @@ public sealed class _03_BacktestingTests_Cash
         Assert.IsNotNull(options);
 
         var margin = await cashManagement.GetMarginAsync();
-        var expectedMargin = options.Value.InitialCash - order.GetValue() - order.ExecutedFee;
+        var expectedMargin = options.Value.InitialCash - createdOrder.GetValue() - createdOrder.ExecutedFee;
         Assert.AreEqual(Math.Round(expectedMargin!.Value, 6), Math.Round(margin, 6));
     }
 
@@ -89,7 +101,7 @@ public sealed class _03_BacktestingTests_Cash
         var candle = CandleHelper.Random(DateTime.Now);
         exchange.SetCandle(candle);
 
-        var order = Order.CreateLong("BTC_USDT");
+        var order = OrderBuilder.CreateLong("BTC_USDT");
         order.Quantity = 4;
         order.Price = candle.Close * .9;
 
@@ -121,7 +133,7 @@ public sealed class _03_BacktestingTests_Cash
         var candle = CandleHelper.Random(DateTime.Now);
         exchange.SetCandle(candle);
 
-        var order = Order.CreateShort("BTC_USDT");
+        var order = OrderBuilder.CreateShort("BTC_USDT");
         order.Quantity = 3;
         order.Price = candle.Close * 1.02;
 
@@ -162,11 +174,11 @@ public sealed class _03_BacktestingTests_Cash
         exchange.SetCandle(inputCandles[0]);
 
         // Limit Order
-        var order = Order.CreateLong("BTC_USDT");
+        var order = OrderBuilder.CreateLong("BTC_USDT");
         order.Quantity = 1;
         order.Price = 3.5;
         order.Lever = 1;
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
 
         // Run Candles
         foreach (var candle in inputCandles)
@@ -176,10 +188,10 @@ public sealed class _03_BacktestingTests_Cash
         }
 
         // Closing Market Order
-        var closingOrder = Order.CreateShort("BTC_USDT");
-        closingOrder.Quantity = order.Quantity;
-        closingOrder.Lever = order.Lever;
-        await exchange.PlaceOrderAsync(closingOrder);
+        var order2 = OrderBuilder.CreateShort("BTC_USDT");
+        order2.Quantity = order.Quantity;
+        order2.Lever = order.Lever;
+        var orderId2 = await exchange.PlaceOrderAsync(order2);
 
         // Assert Position
         var positionManagement = _serviceProvider.GetService<IBacktestingPositionManagement>();
@@ -192,6 +204,12 @@ public sealed class _03_BacktestingTests_Cash
         Assert.AreEqual(1, positions.Count);
 
         // Assert
+        var orderManagement = _serviceProvider.GetService<IBacktestingOrderManagement>();
+        Assert.IsNotNull(orderManagement);
+
+        //var createdOrder = await orderManagement.GetOrderAsync(orderId);
+        //Assert.IsNotNull(createdOrder);
+
         var cashManagement = _serviceProvider.GetService<IBacktestingCashManagement>();
         Assert.IsNotNull(cashManagement);
 
@@ -229,11 +247,11 @@ public sealed class _03_BacktestingTests_Cash
         exchange.SetCandle(inputCandles[0]);
 
         // Limit Order
-        var order = Order.CreateShort("BTC_USDT");
+        var order = OrderBuilder.CreateShort("BTC_USDT");
         order.Quantity = (new Random().NextDouble() + 1) * 4;
         order.Price = 5.5;
         order.Lever = (new Random().NextDouble() + 1) * 4;
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
 
         // Run Candles
         foreach (var candle in inputCandles)
@@ -243,6 +261,12 @@ public sealed class _03_BacktestingTests_Cash
         }
 
         // Assert first Limit Order
+        var orderManagement = _serviceProvider.GetService<IBacktestingOrderManagement>();
+        Assert.IsNotNull(orderManagement);
+
+        var createdOrder = await orderManagement.GetOrderAsync(orderId);
+        Assert.IsNotNull(createdOrder);
+
         var positionManagement = _serviceProvider.GetService<IBacktestingPositionManagement>();
         Assert.IsNotNull(positionManagement);
 
@@ -259,14 +283,14 @@ public sealed class _03_BacktestingTests_Cash
         Assert.IsNotNull(options);
 
         var margin = await cashManagement.GetMarginAsync();
-        var expectedCashAfterFirstExecutedOrder = options.Value.InitialCash - order.GetValue() - order.ExecutedFee;
+        var expectedCashAfterFirstExecutedOrder = options.Value.InitialCash - createdOrder.GetValue() - createdOrder.ExecutedFee;
         Assert.AreEqual(expectedCashAfterFirstExecutedOrder, margin);
 
         // Closing Market Order
-        var closingOrder = Order.CreateLong("BTC_USDT");
-        closingOrder.Quantity = order.Quantity;
-        closingOrder.Lever = order.Lever;
-        await exchange.PlaceOrderAsync(closingOrder);
+        var order2 = OrderBuilder.CreateLong("BTC_USDT");
+        order2.Quantity = order.Quantity;
+        order2.Lever = order.Lever;
+        var orderId2 = await exchange.PlaceOrderAsync(order2);
 
         // Assert Position after Market Order
         openPosition = await positionManagement.GetOpenPositionAsync();
@@ -302,7 +326,7 @@ public sealed class _03_BacktestingTests_Cash
         exchange.SetCandle(inputCandles[0]);
 
         // Limit Order
-        var order = Order.CreateLong("BTC_USDT");
+        var order = OrderBuilder.CreateLong("BTC_USDT");
         order.Quantity = 1;
         order.Price = 6;
         order.Lever = 1;
@@ -316,7 +340,7 @@ public sealed class _03_BacktestingTests_Cash
         }
 
         // Closing Market Order
-        var closingOrder = Order.CreateShort("BTC_USDT");
+        var closingOrder = OrderBuilder.CreateShort("BTC_USDT");
         closingOrder.Quantity = order.Quantity;
         closingOrder.Lever = order.Lever;
         await exchange.PlaceOrderAsync(closingOrder);
@@ -365,7 +389,7 @@ public sealed class _03_BacktestingTests_Cash
         exchange.SetCandle(inputCandles[0]);
 
         // Limit Order
-        var order = Order.CreateShort("BTC_USDT");
+        var order = OrderBuilder.CreateShort("BTC_USDT");
         order.Quantity = 1;
         order.Price = 6;
         order.Lever = 1;
@@ -379,7 +403,7 @@ public sealed class _03_BacktestingTests_Cash
         }
 
         // Closing Market Order
-        var closingOrder = Order.CreateLong("BTC_USDT");
+        var closingOrder = OrderBuilder.CreateLong("BTC_USDT");
         closingOrder.Quantity = order.Quantity;
         closingOrder.Lever = order.Lever;
         await exchange.PlaceOrderAsync(closingOrder);

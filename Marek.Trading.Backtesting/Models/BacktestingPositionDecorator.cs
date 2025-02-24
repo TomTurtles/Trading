@@ -5,7 +5,7 @@ public class BacktestingPositionDecorator(IPosition position) : IBacktestingPosi
     private readonly IPosition _position = position;
 
 
-    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string Id { get; } = Guid.NewGuid().ToString();
     public string Symbol { get; set; } = position.Symbol;
     public PositionSide Side { get; set; } = position.Side;
     public double? StopLossPrice { get; set; } = position.StopLossPrice;
@@ -59,11 +59,11 @@ public class BacktestingPositionDecorator(IPosition position) : IBacktestingPosi
 
 
     #region Orders
-    private List<Order> ExecutedOrders { get; } = [];
-    public IReadOnlyList<Order> EntryOrders => ExecutedOrders.Where(o => o.ToPositionSide() == Side).ToList();
-    public IReadOnlyList<Order> ExitOrders => ExecutedOrders.Where(o => o.ToPositionSide() != Side).ToList();
-    public IReadOnlyList<Order> OrderedEntryOrders => EntryOrders.OrderBy(o => o.ExecutedTime).ToList();
-    public IReadOnlyList<Order> OrderedExitOrders => ExitOrders.OrderBy(o => o.ExecutedTime).ToList();
+    private List<IOrder> ExecutedOrders { get; } = [];
+    public IReadOnlyList<IOrder> EntryOrders => ExecutedOrders.Where(o => o.ToPositionSide() == Side).ToList();
+    public IReadOnlyList<IOrder> ExitOrders => ExecutedOrders.Where(o => o.ToPositionSide() != Side).ToList();
+    public IReadOnlyList<IOrder> OrderedEntryOrders => EntryOrders.OrderBy(o => o.ExecutedTime).ToList();
+    public IReadOnlyList<IOrder> OrderedExitOrders => ExitOrders.OrderBy(o => o.ExecutedTime).ToList();
 
 
 
@@ -71,7 +71,7 @@ public class BacktestingPositionDecorator(IPosition position) : IBacktestingPosi
 
 
 
-    public void AddExecutedOrder(Order order)
+    public void AddExecutedOrder(IOrder order)
     {
         if (order.Status != OrderStatus.Filled) throw new InvalidOperationException($"status: '{order.Status}' invalid");
         if (order.Symbol != Symbol) throw new InvalidOperationException($"symbol: '{order.Symbol}' invalid");

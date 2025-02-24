@@ -15,11 +15,11 @@ public sealed class _02_BacktestingTests_Positions
         exchange.SetCandle(CandleHelper.Random(DateTime.Now));
 
         // Market Order
-        var order = Order.CreateLong("BTC_USDT");
+        var order = OrderBuilder.CreateLong("BTC_USDT");
         order.Quantity = 1;
 
         // Act
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
 
         // Assert
         var positionManagement = _serviceProvider.GetService<IBacktestingPositionManagement>();
@@ -38,7 +38,7 @@ public sealed class _02_BacktestingTests_Positions
         Assert.IsTrue(position.EntryOrders.Any());
         Assert.IsFalse(position.ExitOrders.Any());
         Assert.AreNotEqual(position.EntryOrders.Count, position.ExitOrders.Count);
-        Assert.AreEqual(position.EntryOrders[0].Id, order.Id);
+        Assert.AreEqual(position.EntryOrders[0].Id, orderId);
 
         var positions = await positionManagement.GetPositionsAsync();
         Assert.AreEqual(1, positions.Count);
@@ -54,11 +54,11 @@ public sealed class _02_BacktestingTests_Positions
         exchange.SetCandle(CandleHelper.Random(DateTime.Now));
 
         // Market Order
-        var order = Order.CreateShort("BTC_USDT");
+        var order = OrderBuilder.CreateShort("BTC_USDT");
         order.Quantity = 1;
 
         // Act
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
 
         // Assert
         var positionManagement = _serviceProvider.GetService<IBacktestingPositionManagement>();
@@ -77,7 +77,7 @@ public sealed class _02_BacktestingTests_Positions
         Assert.IsTrue(position.EntryOrders.Any());
         Assert.IsFalse(position.ExitOrders.Any());
         Assert.AreNotEqual(position.EntryOrders.Count, position.ExitOrders.Count);
-        Assert.AreEqual(position.EntryOrders[0].Id, order.Id);
+        Assert.AreEqual(position.EntryOrders[0].Id, orderId);
 
         var positions = await positionManagement.GetPositionsAsync();
         Assert.AreEqual(1, positions.Count);
@@ -101,10 +101,10 @@ public sealed class _02_BacktestingTests_Positions
         exchange.SetCandle(inputCandles[0]);
 
         // Limit Order
-        var order = Order.CreateLong("BTC_USDT");
+        var order = OrderBuilder.CreateLong("BTC_USDT");
         order.Quantity = 3;
         order.Price = 3.5;
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
 
         // Run Candles
         foreach (var candle in inputCandles)
@@ -117,7 +117,7 @@ public sealed class _02_BacktestingTests_Positions
         var orderManagement = _serviceProvider.GetService<IBacktestingOrderManagement>();
         Assert.IsNotNull(orderManagement);
 
-        var getOrder = await orderManagement.GetOrderAsync(order.Id);
+        var getOrder = await orderManagement.GetOrderAsync(orderId);
         Assert.IsNotNull(getOrder);
         Assert.AreEqual(OrderStatus.Filled, getOrder.Status);
         Assert.AreEqual(inputCandles[2].Timestamp, getOrder.ExecutedTime);
@@ -142,7 +142,7 @@ public sealed class _02_BacktestingTests_Positions
         Assert.IsTrue(position.EntryOrders.Any());
         Assert.IsFalse(position.ExitOrders.Any());
         Assert.AreNotEqual(position.EntryOrders.Count, position.ExitOrders.Count);
-        Assert.AreEqual(position.EntryOrders[0].Id, order.Id);
+        Assert.AreEqual(position.EntryOrders[0].Id, orderId);
 
         var positions = await positionManagement.GetPositionsAsync();
         Assert.AreEqual(1, positions.Count);
@@ -166,10 +166,10 @@ public sealed class _02_BacktestingTests_Positions
         exchange.SetCandle(inputCandles[0]);
 
         // Limit Order
-        var order = Order.CreateShort("BTC_USDT");
+        var order = OrderBuilder.CreateShort("BTC_USDT");
         order.Quantity = 2;
         order.Price = 4.5;
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
 
         // Run Candles
         foreach (var candle in inputCandles)
@@ -182,7 +182,7 @@ public sealed class _02_BacktestingTests_Positions
         var orderManagement = _serviceProvider.GetService<IBacktestingOrderManagement>();
         Assert.IsNotNull(orderManagement);
 
-        var getOrder = await orderManagement.GetOrderAsync(order.Id);
+        var getOrder = await orderManagement.GetOrderAsync(orderId);
         Assert.IsNotNull(getOrder);
         Assert.AreEqual(OrderStatus.Filled, getOrder.Status);
         Assert.AreEqual(inputCandles[2].Timestamp, getOrder.ExecutedTime);
@@ -206,7 +206,7 @@ public sealed class _02_BacktestingTests_Positions
         Assert.IsTrue(position.EntryOrders.Any());
         Assert.IsFalse(position.ExitOrders.Any());
         Assert.AreNotEqual(position.EntryOrders.Count, position.ExitOrders.Count);
-        Assert.AreEqual(position.EntryOrders[0].Id, order.Id);
+        Assert.AreEqual(position.EntryOrders[0].Id, orderId);
 
         var positions = await positionManagement.GetPositionsAsync();
         Assert.AreEqual(1, positions.Count);
@@ -231,10 +231,10 @@ public sealed class _02_BacktestingTests_Positions
         exchange.SetCandle(inputCandles[0]);
 
         // Limit Order
-        var order = Order.CreateLong("BTC_USDT");
+        var order = OrderBuilder.CreateLong("BTC_USDT");
         order.Quantity = 3;
         order.Price = 3.5;
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
 
         // Run Candles
         foreach (var candle in inputCandles)
@@ -244,15 +244,15 @@ public sealed class _02_BacktestingTests_Positions
         }
 
         // Closing Market Order
-        var closingOrder = Order.CreateShort("BTC_USDT");
+        var closingOrder = OrderBuilder.CreateShort("BTC_USDT");
         closingOrder.Quantity = order.Quantity;
-        await exchange.PlaceOrderAsync(closingOrder);
+        var closingOrderId = await exchange.PlaceOrderAsync(closingOrder);
 
         // Assert Order
         var orderManagement = _serviceProvider.GetService<IBacktestingOrderManagement>();
         Assert.IsNotNull(orderManagement);
 
-        var getOrder = await orderManagement.GetOrderAsync(order.Id);
+        var getOrder = await orderManagement.GetOrderAsync(orderId);
         Assert.IsNotNull(getOrder);
         Assert.AreEqual(OrderStatus.Filled, getOrder.Status);
         Assert.AreEqual(inputCandles[2].Timestamp, getOrder.ExecutedTime);
@@ -276,8 +276,8 @@ public sealed class _02_BacktestingTests_Positions
         Assert.IsTrue(position.EntryOrders.Any());
         Assert.IsTrue(position.ExitOrders.Any());
         Assert.AreEqual(position.EntryOrders.Count, position.ExitOrders.Count);
-        Assert.AreEqual(position.EntryOrders[0].Id, order.Id);
-        Assert.AreEqual(position.ExitOrders[0].Id, closingOrder.Id);
+        Assert.AreEqual(position.EntryOrders[0].Id, orderId);
+        Assert.AreEqual(position.ExitOrders[0].Id, closingOrderId);
     }
 
     [TestMethod]
@@ -298,10 +298,10 @@ public sealed class _02_BacktestingTests_Positions
         exchange.SetCandle(inputCandles[0]);
 
         // Limit Order
-        var order = Order.CreateShort("BTC_USDT");
+        var order = OrderBuilder.CreateShort("BTC_USDT");
         order.Quantity = 3;
         order.Price = 4.5;
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
 
         // Run Candles
         foreach (var candle in inputCandles)
@@ -311,15 +311,15 @@ public sealed class _02_BacktestingTests_Positions
         }
 
         // Closing Market Order
-        var closingOrder = Order.CreateLong("BTC_USDT");
+        var closingOrder = OrderBuilder.CreateLong("BTC_USDT");
         closingOrder.Quantity = order.Quantity;
-        await exchange.PlaceOrderAsync(closingOrder);
+        var closingOrderId = await exchange.PlaceOrderAsync(closingOrder);
 
         // Assert Order
         var orderManagement = _serviceProvider.GetService<IBacktestingOrderManagement>();
         Assert.IsNotNull(orderManagement);
 
-        var getOrder = await orderManagement.GetOrderAsync(order.Id);
+        var getOrder = await orderManagement.GetOrderAsync(orderId);
         Assert.IsNotNull(getOrder);
         Assert.AreEqual(OrderStatus.Filled, getOrder.Status);
         Assert.AreEqual(inputCandles[2].Timestamp, getOrder.ExecutedTime);
@@ -343,8 +343,8 @@ public sealed class _02_BacktestingTests_Positions
         Assert.IsTrue(position.EntryOrders.Any());
         Assert.IsTrue(position.ExitOrders.Any());
         Assert.AreEqual(position.EntryOrders.Count, position.ExitOrders.Count);
-        Assert.AreEqual(position.EntryOrders[0].Id, order.Id);
-        Assert.AreEqual(position.ExitOrders[0].Id, closingOrder.Id);
+        Assert.AreEqual(position.EntryOrders[0].Id, orderId);
+        Assert.AreEqual(position.ExitOrders[0].Id, closingOrderId);
     }
 
     [TestMethod]
@@ -365,10 +365,10 @@ public sealed class _02_BacktestingTests_Positions
         exchange.SetCandle(inputCandles[0]);
 
         // Limit Order
-        var order = Order.CreateLong("BTC_USDT");
+        var order = OrderBuilder.CreateLong("BTC_USDT");
         order.Quantity = 3;
         order.Price = 3.5;
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
 
         // Run Candles
         foreach (var candle in inputCandles)
@@ -378,15 +378,15 @@ public sealed class _02_BacktestingTests_Positions
         }
 
         // Closing Market Order
-        var closingOrder = Order.CreateShort("BTC_USDT");
+        var closingOrder = OrderBuilder.CreateShort("BTC_USDT");
         closingOrder.Quantity = order.Quantity - 1; // The reason why it should not work
-        await exchange.PlaceOrderAsync(closingOrder);
+        var closingOrderId = await exchange.PlaceOrderAsync(closingOrder);
 
         // Assert Order
         var orderManagement = _serviceProvider.GetService<IBacktestingOrderManagement>();
         Assert.IsNotNull(orderManagement);
 
-        var getOrder = await orderManagement.GetOrderAsync(order.Id);
+        var getOrder = await orderManagement.GetOrderAsync(orderId);
         Assert.IsNotNull(getOrder);
         Assert.AreEqual(OrderStatus.Filled, getOrder.Status);
         Assert.AreEqual(inputCandles[2].Timestamp, getOrder.ExecutedTime);
@@ -411,8 +411,8 @@ public sealed class _02_BacktestingTests_Positions
         Assert.IsTrue(position.ExitOrders.Any());
         Assert.AreEqual(position.EntryOrders.Count, position.ExitOrders.Count);
         Assert.AreNotEqual(position.EntryQuantity, position.ExitQuantity);
-        Assert.AreEqual(position.EntryOrders[0].Id, order.Id);
-        Assert.AreEqual(position.ExitOrders[0].Id, closingOrder.Id);
+        Assert.AreEqual(position.EntryOrders[0].Id, orderId);
+        Assert.AreEqual(position.ExitOrders[0].Id, closingOrderId);
     }
 
 
@@ -434,10 +434,10 @@ public sealed class _02_BacktestingTests_Positions
         exchange.SetCandle(inputCandles[0]);
 
         // Limit Order
-        var order = Order.CreateShort("BTC_USDT");
+        var order = OrderBuilder.CreateShort("BTC_USDT");
         order.Quantity = 3;
         order.Price = 4.5;
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
 
         // Run Candles
         foreach (var candle in inputCandles)
@@ -447,15 +447,15 @@ public sealed class _02_BacktestingTests_Positions
         }
 
         // Closing Market Order
-        var closingOrder = Order.CreateLong("BTC_USDT");
+        var closingOrder = OrderBuilder.CreateLong("BTC_USDT");
         closingOrder.Quantity = order.Quantity - 1; // The reason why it should not work
-        await exchange.PlaceOrderAsync(closingOrder);
+        var closingOrderId = await exchange.PlaceOrderAsync(closingOrder);
 
         // Assert Order
         var orderManagement = _serviceProvider.GetService<IBacktestingOrderManagement>();
         Assert.IsNotNull(orderManagement);
 
-        var getOrder = await orderManagement.GetOrderAsync(order.Id);
+        var getOrder = await orderManagement.GetOrderAsync(orderId);
         Assert.IsNotNull(getOrder);
         Assert.AreEqual(OrderStatus.Filled, getOrder.Status);
         Assert.AreEqual(inputCandles[2].Timestamp, getOrder.ExecutedTime);
@@ -480,8 +480,8 @@ public sealed class _02_BacktestingTests_Positions
         Assert.IsTrue(position.ExitOrders.Any());
         Assert.AreEqual(position.EntryOrders.Count, position.ExitOrders.Count);
         Assert.AreNotEqual(position.EntryQuantity, position.ExitQuantity);
-        Assert.AreEqual(position.EntryOrders[0].Id, order.Id);
-        Assert.AreEqual(position.ExitOrders[0].Id, closingOrder.Id);
+        Assert.AreEqual(position.EntryOrders[0].Id, orderId);
+        Assert.AreEqual(position.ExitOrders[0].Id, closingOrderId);
     }
 
     [TestMethod]
@@ -495,12 +495,12 @@ public sealed class _02_BacktestingTests_Positions
         exchange.SetCandle(candle);
 
         // Market Order
-        var order = Order.CreateLong("BTC_USDT");
+        var order = OrderBuilder.CreateLong("BTC_USDT");
         order.Quantity = (new Random().NextDouble() + 1) * 5;
         order.Lever = (new Random().NextDouble() + 1) * 3;
 
         // Act
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
 
         // Assert
         var positionManagement = _serviceProvider.GetService<IBacktestingPositionManagement>();
@@ -534,12 +534,12 @@ public sealed class _02_BacktestingTests_Positions
         exchange.SetCandle(candle);
 
         // Market Order
-        var order = Order.CreateShort("BTC_USDT");
+        var order = OrderBuilder.CreateShort("BTC_USDT");
         order.Quantity = (new Random().NextDouble() + 1) * 5;
         order.Lever = (new Random().NextDouble() + 1) * 3;
 
         // Act
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
 
         // Assert
         var positionManagement = _serviceProvider.GetService<IBacktestingPositionManagement>();
@@ -574,23 +574,23 @@ public sealed class _02_BacktestingTests_Positions
         exchange.SetCandle(candle1);
 
         // Market Order
-        var order = Order.CreateLong("BTC_USDT");
+        var order = OrderBuilder.CreateLong("BTC_USDT");
         order.Quantity = 4;
         order.Lever = 2;
 
         // Act 1
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
 
         // Candle 2
         var candle2 = CandleHelper.Random(DateTime.Now);
         exchange.SetCandle(candle2);
 
         // Partially Closing Market Order
-        var closingOrder = Order.CreateShort("BTC_USDT");
-        closingOrder.Quantity = 1.5;
+        var order2 = OrderBuilder.CreateShort("BTC_USDT");
+        order2.Quantity = 1.5;
 
         // Act 2
-        await exchange.PlaceOrderAsync(closingOrder);
+        var closingOrderId = await exchange.PlaceOrderAsync(order2);
 
         // Assert
         var positionManagement = _serviceProvider.GetService<IBacktestingPositionManagement>();
@@ -601,7 +601,10 @@ public sealed class _02_BacktestingTests_Positions
 
         // Assert Quantity
         Assert.AreEqual(order.Quantity, position.EntryQuantity);
-        Assert.AreEqual(closingOrder.Quantity, position.ExitQuantity);
+        Assert.AreEqual(order2.Quantity, position.ExitQuantity);
+
+        var closingOrder = position.ExitOrders.SingleOrDefault(o => o.Id == closingOrderId);
+        Assert.IsNotNull(closingOrder);
 
         // Assert Value
         var expectedPNL = (candle2.Close - candle1.Close) * closingOrder.Lever * closingOrder.Quantity;
@@ -620,12 +623,12 @@ public sealed class _02_BacktestingTests_Positions
         exchange.SetCandle(candle1);
 
         // Market Order
-        var order = Order.CreateShort("BTC_USDT");
+        var order = OrderBuilder.CreateShort("BTC_USDT");
         order.Quantity = (new Random().NextDouble() + 1) * 2;
         order.Lever = (new Random().NextDouble() + 1) * 3;
 
         // Act 1
-        await exchange.PlaceOrderAsync(order);
+        var orderId = await exchange.PlaceOrderAsync(order);
 
         // Candle 2
         var candle2 = CandleHelper.Random(DateTime.Now);
@@ -633,11 +636,11 @@ public sealed class _02_BacktestingTests_Positions
 
         // Partially Closing Market Order
         var closingFactor = .6;
-        var closingOrder = Order.CreateLong("BTC_USDT");
-        closingOrder.Quantity = order.Quantity * closingFactor;
+        var order2 = OrderBuilder.CreateLong("BTC_USDT");
+        order2.Quantity = order.Quantity * closingFactor;
 
         // Act 2
-        await exchange.PlaceOrderAsync(closingOrder);
+        var closingOrderId = await exchange.PlaceOrderAsync(order2);
 
         // Assert
         var positionManagement = _serviceProvider.GetService<IBacktestingPositionManagement>();
@@ -648,7 +651,10 @@ public sealed class _02_BacktestingTests_Positions
 
         // Assert Quantity
         Assert.AreEqual(order.Quantity, position.EntryQuantity);
-        Assert.AreEqual(closingOrder.Quantity, position.ExitQuantity);
+        Assert.AreEqual(order2.Quantity, position.ExitQuantity);
+
+        var closingOrder = position.ExitOrders.SingleOrDefault(o => o.Id == closingOrderId);
+        Assert.IsNotNull(closingOrder);
 
         // Assert Value
         var expectedPNL = (candle1.Close - candle2.Close) * closingOrder.Lever * closingOrder.Quantity;

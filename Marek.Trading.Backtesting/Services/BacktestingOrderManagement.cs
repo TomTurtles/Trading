@@ -15,26 +15,26 @@ public class BacktestingOrderManagement(
     public IOptions<BacktestingOptions> Options { get; } = options;
 
     // Management
-    private readonly ConcurrentDictionary<DateTime, List<Order>> _orderHistory = new(DateTimeEqualityComparer.Use());
-    private Dictionary<DateTime, List<Order>> OrderedOrders => new(_orderHistory.OrderBy(o => o.Key));
-    private IEnumerable<Order> Orders => OrderedOrders.Values.SelectMany(o => o);
+    private readonly ConcurrentDictionary<DateTime, List<IBacktestingOrder>> _orderHistory = new(DateTimeEqualityComparer.Use());
+    private Dictionary<DateTime, List<IBacktestingOrder>> OrderedOrders => new(_orderHistory.OrderBy(o => o.Key));
+    private IEnumerable<IBacktestingOrder> Orders => OrderedOrders.Values.SelectMany(o => o);
 
     #region Requests
 
-    public Task<List<Order>> GetOrdersAsync(CancellationToken cancellationToken = default)
+    public Task<List<IBacktestingOrder>> GetOrdersAsync(CancellationToken cancellationToken = default)
     {
         return Task.FromResult(Orders.ToList());
     }
-    public async Task<List<Order>> GetPendingOrdersAsync(CancellationToken cancellationToken = default)
+    public async Task<List<IBacktestingOrder>> GetPendingOrdersAsync(CancellationToken cancellationToken = default)
     {
         var orders = await GetOrdersAsync(cancellationToken);
         return orders.Where(o => o.IsPending()).ToList();
     }
-    public Task<Order?> GetOrderAsync(string id, CancellationToken cancellationToken = default)
+    public Task<IBacktestingOrder?> GetOrderAsync(string id, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(Orders.SingleOrDefault(o => o.Id == id) ?? null);
     }
-    public Task<Dictionary<DateTime, List<Order>>> GetOrderHistoryAsync(CancellationToken cancellationToken = default)
+    public Task<Dictionary<DateTime, List<IBacktestingOrder>>> GetOrderHistoryAsync(CancellationToken cancellationToken = default)
     {
         return Task.FromResult(OrderedOrders);
     }
@@ -43,7 +43,7 @@ public class BacktestingOrderManagement(
 
     #region Commands
 
-    public async Task PlaceOrderAsync(DateTime timestamp, Order order, CancellationToken cancellationToken = default, double? marketPrice = null, double? feeRate = null)
+    public async Task PlaceOrderAsync(DateTime timestamp, IBacktestingOrder order, CancellationToken cancellationToken = default, double? marketPrice = null, double? feeRate = null)
     {
         if (order.Quantity <= 0) throw new InvalidOperationException($"invalid order quantity '{order.Quantity}'");
 
@@ -84,7 +84,7 @@ public class BacktestingOrderManagement(
         }
     }
 
-    public Task ExecuteOrderAsync(DateTime timestamp, Order order, double executionPrice, double feeRate, CancellationToken cancellationToken)
+    public Task ExecuteOrderAsync(DateTime timestamp, IBacktestingOrder order, double executionPrice, double feeRate, CancellationToken cancellationToken)
     {
         ExecuteOrder(timestamp, order, executionPrice, feeRate);
         return Task.CompletedTask;
@@ -105,7 +105,7 @@ public class BacktestingOrderManagement(
         return Task.CompletedTask;
     }
 
-    private bool IsMarketOrder(Order order, double? marketPrice = null)
+    private bool IsMarketOrder(IOrder order, double? marketPrice = null)
     {
         if (marketPrice is null) return false;
         if (order.IsMarket()) return true;
@@ -140,7 +140,7 @@ public class BacktestingOrderManagement(
     /// </summary>
     /// <param name="timestamp"></param>
     /// <param name="order"></param>
-    private void PlaceOrder(DateTime timestamp, Order order, double? marketPrice, bool doAddCash = true)
+    private void PlaceOrder(DateTime timestamp, IBacktestingOrder order, double? marketPrice, bool doAddCash = true)
     {
         if (Orders.Select(o => o.Id).Contains(order.Id))
         {
@@ -173,7 +173,7 @@ public class BacktestingOrderManagement(
     /// </summary>
     /// <param name="timestamp"></param>
     /// <param name="order"></param>
-    private void CancelOrder(DateTime timestamp, Order order)
+    private void CancelOrder(DateTime timestamp, IBacktestingOrder order)
     {
         // hier ist die Reihenfolge wichtig
         CashManagement.AddCash(new(timestamp, order.GetValue(), "Cancel Order"));
@@ -189,7 +189,7 @@ public class BacktestingOrderManagement(
     /// <param name="order"></param>
     /// <param name="executionPrice"></param>
     /// <param name="feeRate"></param>
-    private void ExecuteOrder(DateTime timestamp, Order order, double? executionPrice, double? feeRate)
+    private void ExecuteOrder(DateTime timestamp, IBacktestingOrder order, double? executionPrice, double? feeRate)
     {
         if (executionPrice is null) throw new NullReferenceException($"execution price is not set for executing a market order");
         if (feeRate is null) throw new NullReferenceException($"fee rate is not set for executing a market order");

@@ -52,12 +52,12 @@ public abstract class ExchangeBase : IExchange, IExchangeInitializable
     public abstract Task<Candle> GetCandleAsync(CancellationToken cancellationToken = default);
 
     // Orders
-    public abstract Task<Order?> GetOrderAsync(string id, CancellationToken cancellationToken = default);
-    public abstract Task<List<Order>> GetPendingOrdersAsync(CancellationToken cancellationToken = default);
-    public abstract Task<List<Order>> GetOrdersAsync(CancellationToken cancellationToken = default);
-    public abstract Task PlaceOrderAsync(Order order, CancellationToken cancellationToken = default);
+    public abstract Task<IOrder?> GetOrderAsync(string id, CancellationToken cancellationToken = default);
+    public abstract Task<List<IOrder>> GetPendingOrdersAsync(CancellationToken cancellationToken = default);
+    public abstract Task<List<IOrder>> GetOrdersAsync(CancellationToken cancellationToken = default);
+    public abstract Task<string> PlaceOrderAsync(IOrder order, CancellationToken cancellationToken = default);
     public abstract Task CancelOrderAsync(string id, CancellationToken cancellationToken = default);
-    public abstract Task CancelOrdersAsync(List<Order> orders, CancellationToken cancellationToken = default);
+    public abstract Task CancelOrdersAsync(List<IOrder> orders, CancellationToken cancellationToken = default);
 
     // Positions
     public abstract Task<IPosition?> GetOpenPositionAsync(CancellationToken cancellationToken = default);

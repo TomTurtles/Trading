@@ -16,12 +16,12 @@ public interface IExchange
     #endregion Candles
 
     #region Orders
-    Task<Order?> GetOrderAsync(string id, CancellationToken cancellationToken = default);
-    Task<List<Order>> GetPendingOrdersAsync(CancellationToken cancellationToken = default);
-    Task<List<Order>> GetOrdersAsync(CancellationToken cancellationToken = default);
-    Task PlaceOrderAsync(Order order, CancellationToken cancellationToken = default);
+    Task<IOrder?> GetOrderAsync(string id, CancellationToken cancellationToken = default);
+    Task<List<IOrder>> GetPendingOrdersAsync(CancellationToken cancellationToken = default);
+    Task<List<IOrder>> GetOrdersAsync(CancellationToken cancellationToken = default);
+    Task<string> PlaceOrderAsync(IOrder order, CancellationToken cancellationToken = default);
     Task CancelOrderAsync(string id, CancellationToken cancellationToken = default);
-    Task CancelOrdersAsync(List<Order> orders, CancellationToken cancellationToken = default);
+    Task CancelOrdersAsync(List<IOrder> orders, CancellationToken cancellationToken = default);
     #endregion Orders
 
     #region Positions

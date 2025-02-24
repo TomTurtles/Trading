@@ -1,15 +1,15 @@
 ﻿namespace Marek.Trading.Core;
 
-public class Order(OrderSide side, string symbol)
+public class Order : IOrder
 {
-    public string Id { get; } = Guid.NewGuid().ToString();
-    public string Symbol { get; set; } = symbol;
+    public string Id { get; set; }
+    public string Symbol { get; set; }
 
     [ConvertStringEnum]
-    public OrderSide Side { get; set; } = side;
+    public OrderSide Side { get; set; }
 
     [ConvertStringEnum]
-    public OrderType Type => Price is null ? OrderType.Market : OrderType.Limit;
+    public OrderType Type { get; set; }
 
     /// <summary>
     /// Wenn Order als MarketOrder ausgeführt werden soll, dann Price NICHT setzen.
@@ -18,19 +18,9 @@ public class Order(OrderSide side, string symbol)
     public double? Price { get; set; }
 
     [ConvertStringEnum]
-    public OrderStatus Status
-    {
-        get
-        {
-            if (CancelledTime.HasValue) return OrderStatus.Cancelled;
-            if (ExecutedTime.HasValue) return OrderStatus.Filled;
-            if (PlacedTime.HasValue) return OrderStatus.Pending;
-            return OrderStatus.Initialized;
-        }
-    }
-
-    public double Quantity { get; set; } = 1;
-    public double Lever { get; set; } = 1;
+    public OrderStatus Status { get; set; }
+    public double Quantity { get; set; }
+    public double Lever { get; set; } 
     public double? StopLossPrice { get; set; }
     public double? TakeProfitPrice { get; set; }
     public double? PlacedPrice { get; set; }
@@ -44,25 +34,10 @@ public class Order(OrderSide side, string symbol)
     /// <summary>
     /// Gesamt-Wert einer ausgeführten Order (OHNE Gebühren)
     /// </summary>
-    public double? ExecutedValue => (ExecutedPrice is null ? null : ExecutedPrice.Value) * Quantity;
+    public double? ExecutedValue { get; set; }
     public DateTime? PlacedTime { get; set; }
     public DateTime? ExecutedTime { get; set; }
     public DateTime? CancelledTime { get; set; }
-
-    public static Order CreateLong(string symbol, double? lever = null)
-    {
-        return new Order(OrderSide.Buy, symbol)
-        {
-            Lever = lever ?? 1
-        };
-    }
-    public static Order CreateShort(string symbol, double? lever = null)
-    {
-        return new Order(OrderSide.Sell, symbol)
-        {
-            Lever = lever ?? 1
-        };
-    }
 
     public override string ToString()
     {

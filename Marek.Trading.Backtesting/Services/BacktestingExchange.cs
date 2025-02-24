@@ -63,17 +63,21 @@ public class BacktestingExchange : ExchangeBase, IBacktestingExchange
     {
         return Task.FromResult(Candle);
     }
-    public override async Task<Order?> GetOrderAsync(string id, CancellationToken cancellationToken = default)
+    public override async Task<IOrder?> GetOrderAsync(string id, CancellationToken cancellationToken = default)
     {
         return await OrderManagement.GetOrderAsync(id, cancellationToken);
     }
-    public override async Task<List<Order>> GetOrdersAsync(CancellationToken cancellationToken = default)
+    public override async Task<List<IOrder>> GetOrdersAsync(CancellationToken cancellationToken = default)
     {
-        return await OrderManagement.GetOrdersAsync(cancellationToken);
+        return (await OrderManagement.GetOrdersAsync(cancellationToken))
+            .Select(o => (IOrder)o)
+            .ToList();
     }
-    public override async Task<List<Order>> GetPendingOrdersAsync(CancellationToken cancellationToken = default)
+    public override async Task<List<IOrder>> GetPendingOrdersAsync(CancellationToken cancellationToken = default)
     {
-        return await OrderManagement.GetPendingOrdersAsync(cancellationToken);
+        return (await OrderManagement.GetPendingOrdersAsync(cancellationToken))
+            .Select(o => (IOrder)o)
+            .ToList();
     }
     public override async Task<IPosition?> GetOpenPositionAsync(CancellationToken cancellationToken = default)
     {
@@ -93,7 +97,7 @@ public class BacktestingExchange : ExchangeBase, IBacktestingExchange
         var orders = await GetPendingOrdersAsync(cancellationToken);
         result += orders.Sum(o => o.GetValue());
 
-        var openPosition = (BacktestingPositionDecorator?)(await GetOpenPositionAsync());
+        var openPosition = await GetOpenPositionAsync();
         if (openPosition == null) return result;
 
         // Realised PNL schlagen sich bereits im Margin nieder
@@ -118,12 +122,14 @@ public class BacktestingExchange : ExchangeBase, IBacktestingExchange
     #endregion Requests
 
     #region Commands
-    public override async Task PlaceOrderAsync(Order order, CancellationToken cancellationToken = default)
+    public override async Task<string> PlaceOrderAsync(IOrder order, CancellationToken cancellationToken = default)
     {
         // Hier wird (momentan) nicht zwischen Market/Limit Order unterschieden, erst in OrderManagement
         var marketPrice = await GetMarketPriceAsync(cancellationToken);
         var feeRate = await GetFeeRateAsync(cancellationToken);
-        await OrderManagement.PlaceOrderAsync(Candle.Timestamp, order, cancellationToken, marketPrice, feeRate);
+        var backtestingOrder = new BacktestingOrderDecorator(order);
+        await OrderManagement.PlaceOrderAsync(Candle.Timestamp, backtestingOrder, cancellationToken, marketPrice, feeRate);
+        return backtestingOrder.Id;
     }
 
     public override async Task CancelOrderAsync(string id, CancellationToken cancellationToken = default)
@@ -131,7 +137,7 @@ public class BacktestingExchange : ExchangeBase, IBacktestingExchange
         await OrderManagement.CancelOrderAsync(Candle.Timestamp, id, cancellationToken);
     }
 
-    public override async Task CancelOrdersAsync(List<Order> orders, CancellationToken cancellationToken = default)
+    public override async Task CancelOrdersAsync(List<IOrder> orders, CancellationToken cancellationToken = default)
     {
         var tasks = orders.Select(order => CancelOrderAsync(order.Id));
         await Task.WhenAll(tasks.ToArray());
@@ -150,8 +156,10 @@ public class BacktestingExchange : ExchangeBase, IBacktestingExchange
         var positionToLiquidate = (BacktestingPositionDecorator?)await GetOpenPositionAsync() ?? throw new NullReferenceException(nameof(GetOpenPositionAsync));
 
         // Liquiditäts-Order erstellen
-        var liquidationOrder = new Order(positionToLiquidate.Side.ToOppositeOrderSide(), positionToLiquidate.Symbol)
+        var liquidationOrder = new Order
         {
+            Side = positionToLiquidate.Side.ToOppositeOrderSide(),
+            Symbol = positionToLiquidate.Symbol,
             Quantity = positionToLiquidate.Quantity,
             Lever = positionToLiquidate.Lever,
         };
@@ -169,9 +177,11 @@ public class BacktestingExchange : ExchangeBase, IBacktestingExchange
         var positionToUpdate = await GetOpenPositionAsync() ?? throw new NullReferenceException(nameof(GetOpenPositionAsync));
 
         // Liquiditäts-Order erstellen
-        var updateOrder = new Order(positionToUpdate.Side.ToOrderSide(), positionToUpdate.Symbol)
+        var updateOrder = new Order
         {
-            Quantity = size,
+            Side = positionToUpdate.Side.ToOrderSide(),
+            Symbol = positionToUpdate.Symbol,
+            Quantity = positionToUpdate.Quantity,
             Lever = positionToUpdate.Lever,
         };
 
@@ -188,9 +198,11 @@ public class BacktestingExchange : ExchangeBase, IBacktestingExchange
         var positionToUpdate = await GetOpenPositionAsync() ?? throw new NullReferenceException(nameof(GetOpenPositionAsync));
 
         // Order erstellen
-        var updateOrder = new Order(positionToUpdate.Side.ToOppositeOrderSide(), positionToUpdate.Symbol)
+        var updateOrder = new Order
         {
-            Quantity = size,
+            Side = positionToUpdate.Side.ToOppositeOrderSide(),
+            Symbol = positionToUpdate.Symbol,
+            Quantity = positionToUpdate.Quantity,
             Lever = positionToUpdate.Lever,
         };
 
@@ -278,6 +290,6 @@ public class BacktestingExchange : ExchangeBase, IBacktestingExchange
     private async Task ExecuteOrderAsync(Order order, double executionPrice, CancellationToken cancellationToken = default)
     {
         var feeRate = await GetFeeRateAsync(cancellationToken);
-        await OrderManagement.ExecuteOrderAsync(Candle.Timestamp, order, executionPrice, feeRate, cancellationToken);
+        await OrderManagement.ExecuteOrderAsync(Candle.Timestamp, new BacktestingOrderDecorator(order), executionPrice, feeRate, cancellationToken);
     }
 }

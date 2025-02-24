@@ -8,8 +8,8 @@ public class StrategyDecision(Candle candle, StrategyDecisionType type)
     public string? Reason { get; set; }
     public IPosition? Position { get; set; }
     public IEnumerable<UpdatePositionCommandType>? PositionUpdateCommands { get; set; }
-    public Order? Order { get; set; }
-    public List<Order>? Orders { get; set; }
+    public IOrder? Order { get; set; }
+    public List<IOrder>? Orders { get; set; }
     public Exception? Exception { get; set; }
 
     internal static StrategyDecision Wait(Candle candle, string reason) => new(candle, StrategyDecisionType.Wait)
@@ -28,17 +28,17 @@ public class StrategyDecision(Candle candle, StrategyDecisionType type)
         PositionUpdateCommands = updateCommands
     };
 
-    internal static StrategyDecision CancelOrders(Candle candle, List<Order> orders) => new(candle, StrategyDecisionType.CancelOrders)
+    internal static StrategyDecision CancelOrders(Candle candle, List<IOrder> orders) => new(candle, StrategyDecisionType.CancelOrders)
     {
         Orders = orders
     };
 
-    internal static StrategyDecision GoLong(Candle candle, Order order) => new(candle, StrategyDecisionType.GoLong)
+    internal static StrategyDecision GoLong(Candle candle, IOrder order) => new(candle, StrategyDecisionType.GoLong)
     {
         Order = order
     };
 
-    internal static StrategyDecision GoShort(Candle candle, Order order) => new(candle, StrategyDecisionType.GoShort)
+    internal static StrategyDecision GoShort(Candle candle, IOrder order) => new(candle, StrategyDecisionType.GoShort)
     {
         Order = order
     };

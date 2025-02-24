@@ -65,7 +65,7 @@ public class BacktestingPositionManagement : IBacktestingPositionManagement
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
-    public Task UpdatePositionByExecutedOrderAsync(DateTime timestamp, Order order, CancellationToken cancellationToken = default)
+    public Task UpdatePositionByExecutedOrderAsync(DateTime timestamp, IBacktestingOrder order, CancellationToken cancellationToken = default)
     {
         if (order.IsPending()) throw new InvalidOperationException($"pending orders cannot update positions");
         if (order.IsCancelled()) throw new InvalidOperationException($"cancelled orders cannot update positions");
@@ -131,7 +131,7 @@ public class BacktestingPositionManagement : IBacktestingPositionManagement
     #endregion Notifications
 
 
-    private static IBacktestingPosition CreatePositionFromOrder(Order order)
+    private static IBacktestingPosition CreatePositionFromOrder(IBacktestingOrder order)
     {
         if (order.Quantity <= 0) throw new InvalidOperationException($"invalid quantity: '{order.Quantity}'");
 

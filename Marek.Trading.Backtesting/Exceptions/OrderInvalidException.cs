@@ -1,6 +1,6 @@
 ﻿namespace Marek.Trading.Backtesting;
 
-public class OrderInvalidException(Order order, string reason) : Exception(reason)
+public class OrderInvalidException(IOrder order, string reason) : Exception(reason)
 {
-    public Order Order { get; } = order;
+    public IOrder Order { get; } = order;
 }
