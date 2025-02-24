@@ -129,9 +129,9 @@ public class BacktestingPerformanceTracker : IBacktestingPerformanceTracker
         Debug.WriteLine($"Vergleich CandleCount: {_candlesProcessedCount} | {_candles.Count} | {_equityHistory.Count} | {PositionManagement.GetHistory().Count} | {CashManagement.GetHistory().Count}");
 
         var strategy = new StrategyPerformanceResult(new(PositionManagement.GetHistory()));
-        var backtesting = new BacktestingPerformanceResult(_stopwatch.Elapsed);
+        var backtesting = new BacktestingPerformanceResult(_stopwatch.Elapsed, _candles);
         var candles = new CandlesPerformanceResult(_candles);
-        var equity = new EquityPerformanceResult(new(_equityHistory.OrderBy(kvp => kvp.Key).ToDictionary(kvp => kvp.Key, kvp => kvp.Value)), _candles);
+        var equity = new EquityPerformanceResult(new(_equityHistory.OrderBy(kvp => kvp.Key).ToDictionary(kvp => kvp.Key, kvp => kvp.Value)));
         var cash = new CashPerformanceResult(new(CashManagement.GetHistory()));
 
         Mareator.Publish(this, new OnBacktestingPerformanceResultEventArgs(strategy, backtesting, candles, equity, cash));

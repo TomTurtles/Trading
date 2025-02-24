@@ -112,7 +112,7 @@ public class BacktestingEngine : IBacktestingEngine
             .AppendLine($"-------------------")
             .AppendLine($"{prefix.ToUpperInvariant()}")
             .AppendLine()
-            .AppendJoin('\n', values.Select(kvp => $"{kvp.Key}: {kvp.Value}"));
+            .AppendJoin('\n', values.Select(kvp => $"{kvp.Key}: {Format(kvp.Value)}"));
 
         };
 
@@ -122,5 +122,17 @@ public class BacktestingEngine : IBacktestingEngine
         Debug.WriteLine(resultString);
 
         OnBacktestingFinished?.Invoke(this, e);
+    }
+
+    private object Format(object value)
+    {
+        if (value is double doubleValue)
+        {
+            return Math.Round(doubleValue, 2);
+        }
+        else
+        {
+            return value;   
+        }
     }
 }

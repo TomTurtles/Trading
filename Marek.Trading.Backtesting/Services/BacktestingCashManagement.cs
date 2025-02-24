@@ -11,7 +11,7 @@ public class BacktestingCashManagement : IBacktestingCashManagement
     private double InitialCash => Options.Value.InitialCash;
 
     // Management
-    private readonly ConcurrentDictionary<DateTime, BacktestingCashState> _cashHistory = new(DateTimeEqualityComparer.Use());
+    private readonly Dictionary<DateTime, BacktestingCashState> _cashHistory = new(DateTimeEqualityComparer.Use());
     private Dictionary<DateTime, BacktestingCashState> OrderedCash => new(_cashHistory.OrderBy(kvp => kvp.Key));
     private double Cash => OrderedCash.Any() ? OrderedCash.LastOrDefault().Value.Cash : 0;
     public BacktestingCashManagement(
@@ -42,7 +42,7 @@ public class BacktestingCashManagement : IBacktestingCashManagement
 
         _cashHistory.AddOrUpdate(
             cashTransaction.Timestamp, 
-            new BacktestingCashState(cashTransaction, Cash), 
+            ts => new BacktestingCashState(cashTransaction, Cash), 
             (ts, prevState) =>
             {
                 var newTransaction = new BacktestingCashTransaction(

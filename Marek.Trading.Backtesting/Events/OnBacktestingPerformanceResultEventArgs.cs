@@ -67,12 +67,14 @@ public class CandlesPerformanceResult(List<Candle> candles)
     public int Days => (_candles.Last().Timestamp - _candles.First().Timestamp).Days;
 }
 
-public class BacktestingPerformanceResult(TimeSpan duration)
+public class BacktestingPerformanceResult(TimeSpan duration, List<Candle> candles)
 {
+    private readonly List<Candle> _candles = [.. candles.OrderBy(c => c.Timestamp)];
     public TimeSpan Duration { get; } = duration;
+    public double CandlesPerSecond => (double)_candles.Count / Duration.TotalSeconds;
 }
 
-public class EquityPerformanceResult(SortedDictionary<DateTime, double> equityHistory, List<Candle> candles)
+public class EquityPerformanceResult(SortedDictionary<DateTime, double> equityHistory)
 {
     private readonly SortedDictionary<DateTime, double> _equityHistory = equityHistory;
     public double Count => _equityHistory.Count();
@@ -81,14 +83,8 @@ public class EquityPerformanceResult(SortedDictionary<DateTime, double> equityHi
     public double Start => _equityHistory.Values.First();
     public double End => _equityHistory.Values.Last();
     public double Performance => (End - Start) / Start;
-
-    public double SharpeRatio
-    {
-        get
-        {
-            return _equityHistory.CalculateSharpeRatio();
-        }
-    }
+    public double SharpeRatio => _equityHistory.CalculateSharpeRatio();
+        
     public double MaximumDrawdown
     {
         get

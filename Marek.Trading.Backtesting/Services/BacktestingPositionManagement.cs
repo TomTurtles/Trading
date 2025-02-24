@@ -10,7 +10,8 @@ public class BacktestingPositionManagement : IBacktestingPositionManagement
     public IOptions<BacktestingOptions> Options { get; }
 
     // Management
-    private ConcurrentDictionary<DateTime, IBacktestingPosition> PositionHistory { get; } = new(DateTimeEqualityComparer.Use());
+    private Dictionary<DateTime, IBacktestingPosition> PositionHistory { get; } = new(DateTimeEqualityComparer.Use());
+    //private ConcurrentDictionary<DateTime, IBacktestingPosition> PositionHistory { get; } = new(DateTimeEqualityComparer.Use());
     private Dictionary<DateTime, IBacktestingPosition> OrderedPositionHistory => new(PositionHistory.OrderBy(kvp => kvp.Key));
     private IEnumerable<IBacktestingPosition> Positions => OrderedPositionHistory.Values;
 

@@ -15,7 +15,8 @@ public class BacktestingOrderManagement(
     public IOptions<BacktestingOptions> Options { get; } = options;
 
     // Management
-    private readonly ConcurrentDictionary<DateTime, List<IBacktestingOrder>> _orderHistory = new(DateTimeEqualityComparer.Use());
+    private readonly Dictionary<DateTime, List<IBacktestingOrder>> _orderHistory = new(DateTimeEqualityComparer.Use());
+    //private readonly ConcurrentDictionary<DateTime, List<IBacktestingOrder>> _orderHistory = new(DateTimeEqualityComparer.Use());
     private Dictionary<DateTime, List<IBacktestingOrder>> OrderedOrders => new(_orderHistory.OrderBy(o => o.Key));
     private IEnumerable<IBacktestingOrder> Orders => OrderedOrders.Values.SelectMany(o => o);
 
