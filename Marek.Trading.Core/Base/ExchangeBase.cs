@@ -41,11 +41,13 @@ public abstract class ExchangeBase : IExchange, IExchangeInitializable
     // Identify
     public abstract string Name { get; }
 
+
     // Connection
-    public virtual Task ConnectAsync(CancellationToken cancellationToken = default, params string[] args) => Task.CompletedTask;
+    public virtual Task ConnectAsync(Dictionary<string, object>? parameter = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
     public virtual Task DisconnectAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 
     // Candles
+    public EventHandler<OnNewCandleEventArgs>? OnNewCandle { get; set; }
     public abstract Task<List<Candle>> GetCandlesAsync(CandleInterval interval, int? limit = null, DateTime? start = null, DateTime? end = null, CancellationToken cancellationToken = default);
     public abstract Task<Candle> GetCandleAsync(CancellationToken cancellationToken = default);
 

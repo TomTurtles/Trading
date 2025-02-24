@@ -3,6 +3,8 @@
 public interface ILiveTradingEngine
 {
     LiveTradingState State { get; }
-    void Start();
-    void Stop();
+    Exception? Exception { get; }
+
+    Task StartAsync(CancellationToken cancellationToken = default);
+    Task StopAsync(CancellationToken cancellationToken = default);
 }

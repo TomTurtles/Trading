@@ -88,10 +88,10 @@ public static class Module
         this IServiceCollection services, 
         IStrategy strategy, 
         IExchange exchange,
-        Action<LiveTradingEngineOptions> configure)
+        Action<LiveTradingOptions> configure)
     {
         return services
-            .Configure<LiveTradingEngineOptions>(configure)
+            .Configure<LiveTradingOptions>(configure)
             .AddSingleton<IStrategy>(provider =>
             {
                 if (strategy is IStrategyInitializable initializable)
@@ -99,7 +99,7 @@ public static class Module
                     var logger = provider.GetRequiredService<ILogger<IStrategy>>();
                     var eventDispatcher = provider.GetRequiredService<IMareatorEventDispatcher>();
                     var exchange = provider.GetRequiredService<IBacktestingExchange>();
-                    var options = provider.GetRequiredService<IOptions<LiveTradingEngineOptions>>();
+                    var options = provider.GetRequiredService<IOptions<LiveTradingOptions>>();
 
                     //initializable.Initialize(eventDispatcher, exchange, logger, options.Value);
                 }
@@ -112,7 +112,7 @@ public static class Module
                 {
                     var eventDispatcher = provider.GetRequiredService<IMareatorEventDispatcher>();
                     var logger = provider.GetRequiredService<ILogger<IExchange>>();
-                    var options = provider.GetRequiredService<IOptions<LiveTradingEngineOptions>>();
+                    var options = provider.GetRequiredService<IOptions<LiveTradingOptions>>();
                     //exchangeInitializable.Initialize(eventDispatcher, logger, options.Value);
                 }
 
