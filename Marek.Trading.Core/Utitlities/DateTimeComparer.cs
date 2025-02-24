@@ -7,7 +7,7 @@ internal class DateTimeComparer : IComparer<DateTime>
             
     }
 
-    public static DateTimeComparer Use() => new DateTimeComparer();
+    public static DateTimeComparer Use() => new();
     public int Compare(DateTime x, DateTime y)
     {
         // Null-Checks für x und y
@@ -22,7 +22,7 @@ internal class DateTimeComparer : IComparer<DateTime>
 }
 public class DateTimeEqualityComparer : IEqualityComparer<DateTime>
 {
-    public static DateTimeEqualityComparer Use() => new DateTimeEqualityComparer();
+    public static DateTimeEqualityComparer Use() => new();
     public bool Equals(DateTime x, DateTime y) => GetHashCode(x) == GetHashCode(y);
     public int GetHashCode(DateTime obj) => obj.GetHashCode();
 }

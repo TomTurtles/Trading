@@ -1,5 +1,5 @@
 ﻿
-namespace Marek.Trading.Tests;
+namespace Marek.Trading.Backtesting.Tests;
 internal class Test2Strategy : IStrategy
 {
     public string Name => "test2";

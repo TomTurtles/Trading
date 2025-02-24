@@ -1,6 +1,7 @@
 ﻿namespace Marek.Trading.Core;
 
-public interface IStrategy  : IBacktestingStrategy
+public interface IStrategy 
 {
-    //string Name { get; }
+    string Name { get; }
+    Task RunAsync(Candle candle, CancellationToken cancellationToken = default);
 }

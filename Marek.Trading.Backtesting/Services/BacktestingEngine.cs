@@ -5,7 +5,7 @@ public class BacktestingEngine : IBacktestingEngine
     public IMareatorEventDispatcher EventDispatcher { get; }
     public IBacktestingDataFeed DataFeed { get; }
     public IBacktestingExchange Exchange { get; }
-    public IBacktestingStrategy Strategy { get; }
+    public IStrategy Strategy { get; }
     public IBacktestingPerformanceTracker PerformanceTracker { get; }
     public IOptions<BacktestingOptions> Options { get; }
     public ILogger<BacktestingEngine> Logger { get; set; }
@@ -16,7 +16,7 @@ public class BacktestingEngine : IBacktestingEngine
     public BacktestingEngine(
         IMareatorEventDispatcher eventDispatcher,
         IBacktestingDataFeed dataFeed,
-        IBacktestingStrategy strategy,
+        IStrategy strategy,
         IBacktestingExchange exchange,
         IBacktestingPerformanceTracker performanceTracker,
         IOptions<BacktestingOptions> options,

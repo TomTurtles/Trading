@@ -14,4 +14,8 @@
 		<ProjectReference Include="..\Marek.Trading.Core\Marek.Trading.Core.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Enums\" />
+	</ItemGroup>
+
 </Project>

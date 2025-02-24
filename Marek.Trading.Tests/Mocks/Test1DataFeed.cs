@@ -1,5 +1,4 @@
-﻿
-namespace Marek.Trading.Tests;
+﻿namespace Marek.Trading.Backtesting.Tests;
 
 internal class Test1DataFeed : IDataFeedExchange
 {

@@ -21,8 +21,4 @@
 		<ProjectReference Include="..\Marek.Trading.Live\Marek.Trading.Live.csproj"></ProjectReference>
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Folder Include="Services\" />
-	</ItemGroup>
-
 </Project>

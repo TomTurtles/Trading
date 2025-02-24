@@ -23,4 +23,4 @@ global using Convertification.Attributes;
 global using Marek.Trading;
 global using Marek.Trading.Backtesting;
 global using Marek.Trading.Core;
-global using Marek.Trading.Tests;
+global using Marek.Trading.Backtesting.Tests;

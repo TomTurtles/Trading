@@ -1,4 +1,4 @@
-﻿namespace Marek.Trading.Tests;
+﻿namespace Marek.Trading.Backtesting.Tests;
 public class Test1Strategy : StrategyBase
 {
     public override string Name => "test1";

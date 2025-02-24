@@ -1,4 +1,4 @@
-﻿namespace Marek.Trading.Tests;
+﻿namespace Marek.Trading.Backtesting.Tests;
 internal class Test3Strategy : IStrategy
 {
     public string Name => "test3";

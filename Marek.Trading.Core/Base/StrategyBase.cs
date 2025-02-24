@@ -1,8 +1,7 @@
 ﻿namespace Marek.Trading.Core;
 
 public abstract class StrategyBase 
-    : IBacktestingStrategy
-    , IStrategy
+    : IStrategy
     , IStrategyInitializable
 {
     #region Initialize

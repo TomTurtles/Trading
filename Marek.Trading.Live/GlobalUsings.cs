@@ -18,4 +18,5 @@ global using Mareator;
 global using Convertification.Attributes;
 
 global using Marek.Trading;
+global using Marek.Trading.Live;
 global using Marek.Trading.Core;
