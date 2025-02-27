@@ -1,24 +1,45 @@
 ﻿namespace Marek.Trading.Live;
 
-public class LiveTradingEngine(
-    ILogger<LiveTradingEngine> logger,
-    IExchange exchange,
-    IStrategy strategy,
-    IOptions<LiveTradingOptions> options
-    ) : ILiveTradingEngine
+public class LiveTradingEngine : ILiveTradingEngine
 {
     #region Services
-    public ILogger<LiveTradingEngine> Logger { get; } = logger;
-    public IExchange Exchange { get; } = exchange;
-    public IStrategy Strategy { get; } = strategy;
-    public LiveTradingOptions Options { get; } = options.Value;
+    public ILogger<LiveTradingEngine> Logger { get; }
+    public IExchange Exchange { get; }
+    public IStrategy Strategy { get; }
+    public IMareatorEventDispatcher EventDispatcher { get; }
+    public LiveTradingOptions Options { get; }
     #endregion Services
 
     #region State
     public LiveTradingState State { get; private set; } = LiveTradingState.Idle;
     public Exception? Exception { get; private set; } = null;
     public CancellationTokenSource CancellationTokenSource { get; private set; } = new CancellationTokenSource();
+
     #endregion State
+
+    #region Events
+
+    public EventHandler<OnStrategyDecisionEventArgs>? OnStrategyDecision { get; set; }
+
+    public LiveTradingEngine(
+        ILogger<LiveTradingEngine> logger,
+        IExchange exchange,
+        IStrategy strategy,
+        IOptions<LiveTradingOptions> options,
+        IMareatorEventDispatcher eventDispatcher
+    )
+    {
+        Logger = logger;
+        Exchange = exchange;
+        Strategy = strategy;
+        EventDispatcher = eventDispatcher;
+        Options = options.Value;
+
+        eventDispatcher.Subscribe<OnStrategyDecisionEventArgs>((s, e) => OnStrategyDecision?.Invoke(s, new(e.Candle, e.Decision)));
+    }
+
+    #endregion Events
+
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -59,7 +80,7 @@ public class LiveTradingEngine(
     {
         try
         {
-            Logger.LogInformation($"Livetrading HandleNewCandle {e}");
+            Logger.LogInformation($"Livetrading HandleNewCandle {e.Candle}");
             await Strategy.RunAsync(e.Candle, CancellationTokenSource.Token);
             State = LiveTradingState.Running;
         }

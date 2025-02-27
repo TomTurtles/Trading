@@ -2,7 +2,7 @@
 
 public class CandleHelper
 {
-    public static Candle Random(DateTime? timestamp = null, CandleInterval interval = CandleInterval.Day_1)
+    public static Candle Random(DateTime? timestamp = null)
     {
         return new Candle()
         {
@@ -12,7 +12,6 @@ public class CandleHelper
             High = new Random().NextDouble() * 100,
             Low = new Random().NextDouble() * 100,
             Volume = new Random().NextDouble() * 1000,
-            Interval = interval
         };
     }
 }

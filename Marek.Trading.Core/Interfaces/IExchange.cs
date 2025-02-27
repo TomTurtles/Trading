@@ -11,7 +11,8 @@ public interface IExchange
 
     #region Candles
     EventHandler<OnNewCandleEventArgs>? OnNewCandle { get; set; }
-    Task<List<Candle>> GetCandlesAsync(CandleInterval interval, int? limit = null, DateTime? start = null, DateTime? end = null, CancellationToken cancellationToken = default);
+    //Task<List<Candle>> GetHistoricalCandlesAsync(CandleInterval interval, DateTime start, DateTime end, int? limit = null, CancellationToken cancellationToken = default);
+    Task<List<Candle>> GetCandlesAsync(CandleInterval interval, int? limit = null, CancellationToken cancellationToken = default);
     Task<Candle> GetCandleAsync(CancellationToken cancellationToken = default);
     #endregion Candles
 

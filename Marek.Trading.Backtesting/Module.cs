@@ -56,6 +56,7 @@ public static class Module
             .AddSingleton<IBacktestingPositionManagement, BacktestingPositionManagement>()
             .AddSingleton<IBacktestingCashManagement, BacktestingCashManagement>()
             .AddScoped<IBacktestingPerformanceTracker, BacktestingPerformanceTracker>()
+            .AddSingleton<IDataFeedExchange>(dataFeedExchange)
             .AddSingleton<IStrategy>(provider =>
             {
                 if (strategy is IStrategyInitializable initializable)
@@ -69,18 +70,6 @@ public static class Module
                 }
 
                 return strategy;
-            })
-            .AddSingleton<IDataFeedExchange>(provider =>
-            {
-                if (dataFeedExchange is IExchangeInitializable exchangeInitializable)
-                {
-                    var eventDispatcher = provider.GetRequiredService<IMareatorEventDispatcher>();
-                    var logger = provider.GetRequiredService<ILogger<IExchange>>();
-                    var options = provider.GetRequiredService<IOptions<BacktestingOptions>>();
-                    exchangeInitializable.Initialize(eventDispatcher, logger, options.Value);
-                }
-
-                return dataFeedExchange;
             });
     }
 }

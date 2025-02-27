@@ -4,35 +4,34 @@ public abstract class ExchangeBase : IExchange, IExchangeInitializable
 {
     #region Initialize
 
+    /// <summary>
+    ///  Parameterloser Konstruktor für die Implementierung von Exchanges
+    /// </summary>
     protected ExchangeBase() { }
-    protected ExchangeBase(IMareatorEventDispatcher eventDispatcher, ILogger<IExchange> logger, IExchangeOptions options) => Initialize(eventDispatcher, logger, options);
+
     public void Initialize(IMareatorEventDispatcher eventDispatcher, ILogger<IExchange> logger, IExchangeOptions options)
     {
+        _eventDispatcher = eventDispatcher;
         _logger = logger;
         _options = options;
-        _eventDispatcher = eventDispatcher;
     }
 
     #endregion Initialize
 
     #region Services
+    private IMareatorEventDispatcher? _eventDispatcher;
+    protected IMareatorEventDispatcher EventDispatcher => _eventDispatcher ?? throw new NullReferenceException(nameof(_eventDispatcher));
 
     private ILogger<IExchange>? _logger;
     protected ILogger<IExchange> Logger => _logger ?? throw new NullReferenceException(nameof(_logger));
-
-    private IMareatorEventDispatcher? _eventDispatcher;
-    protected IMareatorEventDispatcher EventDispatcher => _eventDispatcher ?? throw new NullReferenceException(nameof(_eventDispatcher));
 
     #endregion Services
 
     #region Options
 
     private IExchangeOptions? _options;
-
     protected string Symbol => _options?.Symbol ?? throw new NullReferenceException(nameof(_options));
     protected CandleInterval Interval => _options?.Interval ?? throw new NullReferenceException(nameof(_options));
-    protected double InitialCash => _options?.InitialCash ?? throw new NullReferenceException(nameof(_options));
-    protected double MarginCallLevel => _options?.MarginCallLevel ?? throw new NullReferenceException(nameof(_options)); 
 
     #endregion Options
 
@@ -48,7 +47,8 @@ public abstract class ExchangeBase : IExchange, IExchangeInitializable
 
     // Candles
     public EventHandler<OnNewCandleEventArgs>? OnNewCandle { get; set; }
-    public abstract Task<List<Candle>> GetCandlesAsync(CandleInterval interval, int? limit = null, DateTime? start = null, DateTime? end = null, CancellationToken cancellationToken = default);
+    //public abstract Task<List<Candle>> GetHistoricalCandlesAsync(CandleInterval interval, DateTime start, DateTime end, int? limit = null, CancellationToken cancellationToken = default);
+    public abstract Task<List<Candle>> GetCandlesAsync(CandleInterval interval, int? limit = null, CancellationToken cancellationToken = default);
     public abstract Task<Candle> GetCandleAsync(CancellationToken cancellationToken = default);
 
     // Orders

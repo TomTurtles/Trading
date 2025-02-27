@@ -6,8 +6,6 @@ public class TestSettings
         .AddLogging()
         .AddMarekBacktesting(options =>
         {
-            options.Strategy = "test1";
-            options.DataFeed = "test1";
             options.Symbol = "BTC_USDT";
             options.InitialCash = 10000;
             options.MarginCallLevel = 1000;
@@ -24,7 +22,7 @@ public class TestSettings
             var options = provider.GetRequiredService<IOptions<BacktestingOptions>>();
 
             var strategy = strategies
-                .Single(s => s.Name.Equals(options.Value.Strategy, StringComparison.OrdinalIgnoreCase));
+                .Single(s => s.Name.Equals("test1", StringComparison.OrdinalIgnoreCase));
 
             if (strategy is IStrategyInitializable initializable)
             {
@@ -48,7 +46,7 @@ public class TestSettings
             var options = provider.GetRequiredService<IOptions<BacktestingOptions>>();
 
             var exchange = exchanges
-                .Single(s => s.Name.Equals(options.Value.DataFeed, StringComparison.OrdinalIgnoreCase));
+                .Single(s => s.Name.Equals("test1", StringComparison.OrdinalIgnoreCase));
 
             if (exchange is IExchangeInitializable exchangeInitializable)
             {

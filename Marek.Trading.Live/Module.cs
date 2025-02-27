@@ -9,29 +9,31 @@ public static class Module
         Action<LiveTradingOptions> configure)
     {
         return services
+            .AddMareator()
             .Configure<LiveTradingOptions>(configure)
+            .AddSingleton<ILiveTradingEngine, LiveTradingEngine>()
             .AddSingleton<IStrategy>(provider =>
             {
                 if (strategy is IStrategyInitializable initializable)
                 {
                     var logger = provider.GetRequiredService<ILogger<IStrategy>>();
                     var eventDispatcher = provider.GetRequiredService<IMareatorEventDispatcher>();
-                    var exchange = provider.GetRequiredService<IExchange>();
                     var options = provider.GetRequiredService<IOptions<LiveTradingOptions>>();
 
-                    //initializable.Initialize(eventDispatcher, exchange, logger, options.Value);
+                    initializable.Initialize(eventDispatcher, exchange, logger, options.Value);
                 }
 
                 return strategy;
             })
             .AddSingleton<IExchange>(provider =>
             {
-                if (exchange is IExchangeInitializable exchangeInitializable)
+                if (exchange is IExchangeInitializable initializable)
                 {
-                    var eventDispatcher = provider.GetRequiredService<IMareatorEventDispatcher>();
                     var logger = provider.GetRequiredService<ILogger<IExchange>>();
+                    var eventDispatcher = provider.GetRequiredService<IMareatorEventDispatcher>();
                     var options = provider.GetRequiredService<IOptions<LiveTradingOptions>>();
-                    //exchangeInitializable.Initialize(eventDispatcher, logger, options.Value);
+
+                    initializable.Initialize(eventDispatcher, logger, options.Value);
                 }
 
                 return exchange;

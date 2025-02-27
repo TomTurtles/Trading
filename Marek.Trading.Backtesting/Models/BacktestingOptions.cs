@@ -1,10 +1,8 @@
 ﻿namespace Marek.Trading.Backtesting;
 
-public class BacktestingOptions : IStrategyOptions, IExchangeOptions, IDataFeedOptions
+public class BacktestingOptions : IStrategyOptions, IBacktestingExchangeOptions, IDataFeedOptions
 {
-    public ExchangeList DataFeed { get; set; }
     public string Symbol { get; set; }
-    public string Strategy { get; set; }
     public DateTime? StartAt { get; set; } = DateTime.Now.AddMonths(-1);
     public DateTime? EndAt { get; set; } = DateTime.Now;
     public CandleInterval Interval { get; set; } = CandleInterval.Day_1;

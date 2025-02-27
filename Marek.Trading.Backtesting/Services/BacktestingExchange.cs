@@ -18,6 +18,11 @@ public class BacktestingExchange : ExchangeBase, IBacktestingExchange
     private List<Candle> Candles => _candles ?? throw new NullReferenceException(nameof(_candles));
     private Dictionary<CandleInterval, List<Candle>> AdditionalCandles => _additionalCandles ?? [];
 
+    // Properties    
+
+    private IBacktestingExchangeOptions? _options;
+    protected double InitialCash => _options?.InitialCash ?? throw new NullReferenceException(nameof(_options));
+    protected double MarginCallLevel => _options?.MarginCallLevel ?? throw new NullReferenceException(nameof(_options));
 
     public BacktestingExchange(
         IMareatorEventDispatcher eventDispatcher,
@@ -26,16 +31,22 @@ public class BacktestingExchange : ExchangeBase, IBacktestingExchange
         IBacktestingPositionManagement positionManagement,
         IBacktestingCashManagement cashManagement,
         IOptions<BacktestingOptions> options)
-        : base(eventDispatcher, logger, options.Value)
     {
         OrderManagement = orderManagement;
         PositionManagement = positionManagement;
         CashManagement = cashManagement;
+        _options = options.Value;
+        Initialize(eventDispatcher, logger, options.Value);
     }
 
-    #region Requests
 
-    public override Task<List<Candle>> GetCandlesAsync(CandleInterval candleInterval, int? limit = null, DateTime? start = null, DateTime? end = null, CancellationToken cancellationToken = default)
+    #region Requests
+    //public override Task<List<Candle>> GetHistoricalCandlesAsync(CandleInterval interval, DateTime start, DateTime end, int? limit = null, CancellationToken cancellationToken = default)
+    //{
+    //    throw new NotImplementedException();
+    //}
+
+    public override Task<List<Candle>> GetCandlesAsync(CandleInterval candleInterval, int? limit = null, CancellationToken cancellationToken = default)
     {
         // Candle Quelle ermitteln
         List<Candle> candles = [];

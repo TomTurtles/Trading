@@ -4,8 +4,8 @@ public class Candle
 {
     public DateTime Timestamp { get; set; }
 
-    [ConvertStringEnum]
-    public CandleInterval Interval { get; set; }
+    //[ConvertStringEnum]
+    //public CandleInterval Interval { get; set; }
     public double Open { get; set; }
     public double Close { get; set; }
     public double High { get; set; }
@@ -14,6 +14,6 @@ public class Candle
 
     public override string ToString()
     {
-        return $"{Timestamp} | {Close}";
+        return $"{Timestamp} | {Close} | {Volume}";
     }
 }

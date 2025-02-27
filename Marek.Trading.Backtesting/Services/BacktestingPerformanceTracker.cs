@@ -37,6 +37,7 @@ public class BacktestingPerformanceTracker : IBacktestingPerformanceTracker
         Options = options;
         Logger = logger;
 
+        _previousMarketPrice = 0;
         _previousEquity = Options.Value.InitialCash;
         _equityHistory.TryAdd(DateTime.MinValue, Options.Value.InitialCash);
 
@@ -81,7 +82,7 @@ public class BacktestingPerformanceTracker : IBacktestingPerformanceTracker
 
     private void HandlePositionClosed(object sender, OnPositionClosedEventArgs e)
     {
-
+        Logger.LogInformation($"{e.Timestamp} --> Position Closed {e.Position.Side} --> {e.Position.RealizedPNL}");
     }
 
     private void HandlePositionUpdated(object sender, OnPositionUpdatedEventArgs e)
@@ -96,18 +97,20 @@ public class BacktestingPerformanceTracker : IBacktestingPerformanceTracker
     private void HandleStrategyDecision(object sender, OnStrategyDecisionEventArgs e)
     {
         if (e.Decision.Type == StrategyDecisionType.Wait) return;
-        Logger.LogInformation($"{e.Candle} --> Decision {e.Decision}");
+        Logger.LogInformation($"{e.Candle} --> Decision {e.Decision} ({string.Join(" | ", e.Decision.PositionUpdateCommands ?? [])})");
     }
 
+    private double _previousMarketPrice;
     private double _previousEquity;
     private void HandleAccountReport(object sender, OnAccountReportEventArgs e)
     {
         if (e.Equity != _previousEquity)
         {
-            Logger.LogInformation($"{e.Candle} --> Equity {e.Equity} ({(e.Equity - _previousEquity)/_previousEquity:0.00 %})");
-            _previousEquity = e.Equity;
+            Logger.LogInformation($"{e.Candle} ({(e.Candle.Close - _previousMarketPrice)/_previousMarketPrice:0.00 %}) --> Equity {e.Equity} ({(e.Equity - _previousEquity)/_previousEquity:0.00 %})");
         }
-        
+
+        _previousMarketPrice = e.Candle.Close;
+        _previousEquity = e.Equity;
         _equityHistory.AddOrUpdate(e.Candle.Timestamp, e.Equity, (ts, eq) => e.Equity);
     }
 
