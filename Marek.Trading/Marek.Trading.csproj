@@ -15,10 +15,4 @@
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\Marek.Trading.Backtesting\Marek.Trading.Backtesting.csproj"></ProjectReference>
-		<ProjectReference Include="..\Marek.Trading.Core\Marek.Trading.Core.csproj"></ProjectReference>
-		<ProjectReference Include="..\Marek.Trading.Live\Marek.Trading.Live.csproj"></ProjectReference>
-	</ItemGroup>
-
 </Project>

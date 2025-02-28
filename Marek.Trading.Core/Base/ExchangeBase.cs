@@ -1,4 +1,4 @@
-﻿namespace Marek.Trading;
+﻿namespace Marek.Trading.Core;
 
 public abstract class ExchangeBase : IExchange, IExchangeInitializable
 {
