@@ -43,7 +43,9 @@ public abstract class StrategyBase
         => _options?.Interval ?? throw new NullReferenceException(nameof(_options.Interval));
     protected double Lever 
         => _options?.Lever ?? throw new NullReferenceException(nameof(_options.Lever));
-    
+    protected IDictionary<string, object> Parameters
+        => _options?.Parameters ?? new Dictionary<string, object>();
+
     #endregion Options
 
     #region Abstract / Virtual

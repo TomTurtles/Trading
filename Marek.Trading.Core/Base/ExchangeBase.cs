@@ -30,8 +30,12 @@ public abstract class ExchangeBase : IExchange, IExchangeInitializable
     #region Options
 
     private IExchangeOptions? _options;
-    protected string Symbol => _options?.Symbol ?? throw new NullReferenceException(nameof(_options));
-    protected CandleInterval Interval => _options?.Interval ?? throw new NullReferenceException(nameof(_options));
+    protected string Symbol 
+        => _options?.Symbol ?? throw new NullReferenceException(nameof(_options.Symbol));
+    protected CandleInterval Interval 
+        => _options?.Interval ?? throw new NullReferenceException(nameof(_options.Interval));
+    protected IDictionary<string, object> Parameters
+        => _options?.Parameters ?? new Dictionary<string, object>();
 
     #endregion Options
 
