@@ -5,7 +5,7 @@ public interface IExchange
     string Name { get; }
 
     #region Connection
-    Task ConnectAsync(Dictionary<string, object>? parameter = null, CancellationToken cancellationToken = default);
+    Task ConnectAsync(IDictionary<string, object>? parameter = null, CancellationToken cancellationToken = default);
     Task DisconnectAsync(CancellationToken cancellationToken = default);
     #endregion Connection
 

@@ -3,6 +3,6 @@ public class LiveTradingOptions : IExchangeOptions, IStrategyOptions
 {
     public string Symbol { get;set; }
     public CandleInterval Interval { get;set; }
-    public Dictionary<string, object> Parameter { get; set; }
     public double Lever { get; set; }
+    public IDictionary<string, object> Parameters { get; set; }
 }

@@ -11,4 +11,5 @@ public class BacktestingOptions : IStrategyOptions, IBacktestingExchangeOptions,
     public double MarginCallLevel { get; set; } = 100;
     public int WarmUpCandles { get; set; } = 30;
     public double Lever { get; set; } = 1d;
+    public IDictionary<string, object> Parameters { get; set; }
 }

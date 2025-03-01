@@ -8,7 +8,7 @@ public abstract class StrategyBase
 
     protected StrategyBase() { }
 
-    public void Initialize(
+    public virtual void Initialize(
         IMareatorEventDispatcher dispatcher,
         IExchange exchange, 
         ILogger<IStrategy> logger, 

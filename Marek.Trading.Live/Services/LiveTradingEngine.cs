@@ -46,7 +46,7 @@ public class LiveTradingEngine : ILiveTradingEngine
         try
         {
             // Connect
-            await Exchange.ConnectAsync(Options.Parameter, cancellationToken);
+            await Exchange.ConnectAsync(Options.Parameters, cancellationToken);
 
             // Subscribe
             Exchange.OnNewCandle += HandleNewCandle;

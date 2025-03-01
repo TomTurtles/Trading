@@ -9,7 +9,7 @@ public abstract class ExchangeBase : IExchange, IExchangeInitializable
     /// </summary>
     protected ExchangeBase() { }
 
-    public void Initialize(IMareatorEventDispatcher eventDispatcher, ILogger<IExchange> logger, IExchangeOptions options)
+    public virtual void Initialize(IMareatorEventDispatcher eventDispatcher, ILogger<IExchange> logger, IExchangeOptions options)
     {
         _eventDispatcher = eventDispatcher;
         _logger = logger;
@@ -42,7 +42,7 @@ public abstract class ExchangeBase : IExchange, IExchangeInitializable
 
 
     // Connection
-    public virtual Task ConnectAsync(Dictionary<string, object>? parameter = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public virtual Task ConnectAsync(IDictionary<string, object>? parameter = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
     public virtual Task DisconnectAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
 
     // Candles
