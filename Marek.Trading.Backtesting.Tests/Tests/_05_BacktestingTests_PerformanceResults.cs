@@ -29,7 +29,7 @@ public sealed class _05_BacktestingTests_PerformanceResults
 
         var assertionExecuted = false;
         string? exceptionMessage = null;
-        engine.OnBacktestingFinished += (async (s, e) =>
+        engine.OnFinished += (async (s, e) =>
         {
             try
             {

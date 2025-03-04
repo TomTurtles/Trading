@@ -6,5 +6,6 @@ public interface IBacktestingEngine
 
     Task RunAsync(CancellationToken cancellationToken = default);
 
-    event EventHandler<OnBacktestingPerformanceResultEventArgs> OnBacktestingFinished;
+    event EventHandler<OnBacktestingStateChangedEventArgs> OnStateChanged;
+    event EventHandler<OnBacktestingPerformanceResultEventArgs> OnFinished;
 }

@@ -12,7 +12,9 @@ public class BacktestingEngine : IBacktestingEngine
 
     public bool IsRunning => PerformanceTracker.IsRunning;
 
-    public event EventHandler<OnBacktestingPerformanceResultEventArgs> OnBacktestingFinished;
+    public event EventHandler<OnBacktestingStateChangedEventArgs> OnStateChanged;
+    public event EventHandler<OnBacktestingPerformanceResultEventArgs> OnFinished;
+
     public BacktestingEngine(
         IMareatorEventDispatcher eventDispatcher,
         IBacktestingDataFeed dataFeed,
@@ -31,46 +33,57 @@ public class BacktestingEngine : IBacktestingEngine
         Logger = logger;
 
         EventDispatcher.Subscribe<OnBacktestingPerformanceResultEventArgs>(HandleBacktestingPerformanceResult);
+        OnStateChanged?.Invoke(this, new(BacktestingState.Pending));
     }
 
 
     public async Task RunAsync(CancellationToken cancellationToken = default)
     {
-        PerformanceTracker.Start();
-
-        // DataFeed triggern
-        var result = await DataFeed.LoadCandlesAsync(cancellationToken);
-
-        // Exchange Candles übergeben
-        Exchange.SetCandles(result);
-
-        foreach (var candle in result.Candles.Where(c => c.Timestamp >= Options.Value.StartAt))
+        try
         {
-            // Exchange über die Aktuelle Candle informieren
-            Exchange.SetCandle(candle);
+            PerformanceTracker.Start();
 
-            // Margin Call prüfen und ggf. Abbruch
-            if (await Exchange.HasMarginCallAsync(cancellationToken))
+            // DataFeed triggern
+            OnStateChanged?.Invoke(this, new(BacktestingState.Loading));
+            var result = await DataFeed.LoadCandlesAsync(cancellationToken);
+
+            // Exchange Candles übergeben
+            OnStateChanged?.Invoke(this, new(BacktestingState.Running));
+            Exchange.SetCandles(result);
+
+            foreach (var candle in result.Candles.Where(c => c.Timestamp >= Options.Value.StartAt))
             {
-                Logger.LogWarning($"MARGIN CALL LEVEL REACHED AT CANDLE {candle}. Backtesting will be cancelled.");
-                PerformanceTracker.Finish();
-                return;
+                // Exchange über die Aktuelle Candle informieren
+                Exchange.SetCandle(candle);
+
+                // Margin Call prüfen und ggf. Abbruch
+                if (await Exchange.HasMarginCallAsync(cancellationToken))
+                {
+                    Logger.LogWarning($"MARGIN CALL LEVEL REACHED AT CANDLE {candle}. Backtesting will be cancelled.");
+                    PerformanceTracker.Finish();
+                    return;
+                }
+
+                // Exchange Informationen mit der neuen Candle aktualisieren
+                await Exchange.RunAsync(cancellationToken);
+
+                // Strategy die aktuelle Candle behandeln lassen
+                await Strategy.RunAsync(candle, cancellationToken);
+
+                // Exchange Account Report
+                await Exchange.NotifyAccountReportAsync(cancellationToken);
             }
 
-            // Exchange Informationen mit der neuen Candle aktualisieren
-            await Exchange.RunAsync(cancellationToken);
+            // Letzte offene Position schließen
+            await CloseLastOpenPositionAsync(cancellationToken);
 
-            // Strategy die aktuelle Candle behandeln lassen
-            await Strategy.RunAsync(candle, cancellationToken);
-
-            // Exchange Account Report
-            await Exchange.NotifyAccountReportAsync(cancellationToken);
+            PerformanceTracker.Finish();
+            OnStateChanged?.Invoke(this, new(BacktestingState.Completed));
         }
-
-        // Letzte offene Position schließen
-        await CloseLastOpenPositionAsync(cancellationToken);
-
-        PerformanceTracker.Finish();
+        catch (Exception ex)
+        {
+            OnStateChanged?.Invoke(this, new(BacktestingState.Failed, ex));
+        }
     }
 
     private async Task CloseLastOpenPositionAsync(CancellationToken cancellationToken)
@@ -114,14 +127,15 @@ public class BacktestingEngine : IBacktestingEngine
             .AppendLine()
             .AppendJoin('\n', values.Select(kvp => $"{kvp.Key}: {Format(kvp.Value)}"));
 
-        };
+        }
+        ;
 
         var resultString = sb.ToString();
 
         Logger.LogInformation(resultString);
         Debug.WriteLine(resultString);
 
-        OnBacktestingFinished?.Invoke(this, e);
+        OnFinished?.Invoke(this, e);
     }
 
     private object Format(object value)
@@ -132,7 +146,7 @@ public class BacktestingEngine : IBacktestingEngine
         }
         else
         {
-            return value;   
+            return value;
         }
     }
 }

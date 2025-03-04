@@ -40,14 +40,12 @@ public class BacktestingDataFeed(
         var startAt = StartAt.AddSeconds((-1) * (int)interval * options.Value.WarmUpCandles);
         var endAt = EndAt;
 
-        var result = new List<Candle>();
+        var result = new Dictionary<DateTime, Candle>();
         var exceptionCount = 0;
         do
         {
             try
             {
-                var preCount = result.Count;
-
                 var candles = await Exchange.GetCandlesAsync(symbol, interval, limit, startAt, endAt);
 
                 if (!candles.Any())
@@ -56,19 +54,17 @@ public class BacktestingDataFeed(
                     break;
                 }
 
-                result.AddRange(candles);
+                var addedNewCandles = candles.Select(c => result.TryAdd(c.Timestamp, c)).ToList();
 
-                result = result
-                    .OrderBy(candle => candle.Timestamp)
-                    .Distinct()
-                    .ToList();
+                var hasAddedNewCandles = addedNewCandles.Any(c => c);
 
-                endAt = result.First().Timestamp.AddSeconds((-1) * (int)interval);
+                endAt = result.Values.OrderBy(c => c.Timestamp).First().Timestamp.AddSeconds((-1) * (int)interval);
 
                 Logger.LogInformation($"[{interval}] fetched backtesting candle data '{GetLinearDateScale(startAt, EndAt, endAt):0.0%}' ({result.Count})");
+                Logger.LogDebug($"[{interval}] fetched backtesting candle data '{startAt:yyyy-MM-dd HH:mm:ss}' - '{endAt:yyyy-MM-dd HH:mm:ss}': {hasAddedNewCandles}");
 
                 // Abbruchbedingung: falls sich nix verändert hat
-                if (preCount >= result.Count) throw new InvalidOperationException("no new data received");
+                if (!hasAddedNewCandles) throw new InvalidOperationException("no new data received");
             }
             catch (Exception ex)
             {
@@ -78,7 +74,7 @@ public class BacktestingDataFeed(
 
         } while (endAt > startAt && exceptionCount < 5);
 
-        return result;
+        return result.Values.OrderBy(c => c.Timestamp).ToList();
     }
 
     private double GetLinearDateScale(DateTime startAt, DateTime endAt, DateTime variable)
