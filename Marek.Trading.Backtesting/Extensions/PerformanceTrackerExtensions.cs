@@ -5,16 +5,16 @@ public static class PerformanceTrackerExtensions
     /// <summary>
     /// Wandelt eine Liste von absoluten Equity-Werten in relative Renditen um.
     /// </summary>
-    public static List<double> ToRelativeReturns(this IEnumerable<double> equityValues)
+    public static List<decimal> ToRelativeReturns(this IEnumerable<decimal> equityValues)
     {
         var values = equityValues.ToList();
-        var returns = new List<double>();
+        var returns = new List<decimal>();
 
         for (int i = 1; i < values.Count; i++)
         {
             if (values[i - 1] != 0)
             {
-                double relativeReturn = (values[i] - values[i - 1]) / values[i - 1];
+                decimal relativeReturn = (values[i] - values[i - 1]) / values[i - 1];
                 returns.Add(relativeReturn);
             }
             else
@@ -26,25 +26,16 @@ public static class PerformanceTrackerExtensions
         return returns;
     }
 
-    public static double CalculateSharpeRatio(this IEnumerable<double> equityValues, double riskFreeRate = 0.02)
+    public static decimal SharpeRatio(this SortedDictionary<DateTime, decimal> equityHistory, decimal annualRiskFreeRate = 0.02m)
     {
-        if (equityValues.Count() < 2) return 0;
-        var returns = equityValues.ToRelativeReturns();
-        var avgReturn = returns.Average();
-        var stdDev = returns.StandardDeviation();
-
-        return stdDev == 0 ? 0 : (avgReturn - riskFreeRate) / stdDev;
-    }
-
-    public static double CalculateSharpeRatio(this SortedDictionary<DateTime, double> equityDictionary, double annualRiskFreeRate = 0.02)
-    {
-        var interval = Math.Round((equityDictionary.Keys.ToArray()[^1] - equityDictionary.Keys.ToArray()[^2]).TotalSeconds, 3).ToEnum<CandleInterval>();
-        return CalculateSharpeRatio(equityDictionary.Values, interval, annualRiskFreeRate); 
+        var interval = Math.Round((equityHistory.Keys.ToArray()[^1] - equityHistory.Keys.ToArray()[^2]).TotalSeconds, 3).ToEnum<CandleInterval>();
+        return CalculateSharpeRatio(equityHistory.Values, interval, annualRiskFreeRate);
     }
 
     private const double SecondsPerYear = 365.25 * 24 * 60 * 60;
 
-    public static double CalculateSharpeRatio(this IEnumerable<double> equityValues, CandleInterval candleInterval, double annualRiskFreeRate = 0.02)
+    
+    public static decimal CalculateSharpeRatio(this IEnumerable<decimal> equityValues, CandleInterval candleInterval, decimal annualRiskFreeRate = 0.02m)
     {
         if (equityValues.Count() < 2)
             throw new ArgumentException("Mindestens zwei Werte werden benötigt, um Renditen zu berechnen.");
@@ -59,8 +50,81 @@ public static class PerformanceTrackerExtensions
         var interval = (int)candleInterval;
         if (interval == 0) return 0;
 
-        var annualizedReturn = avgReturn / interval * SecondsPerYear;
-        var annualizedStdDev = stdDev * Math.Sqrt(SecondsPerYear / interval);
+        var annualizedReturn = avgReturn / interval * SecondsPerYear.ToDecimal();
+        var annualizedStdDev = stdDev * Math.Sqrt(SecondsPerYear / interval).ToDecimal();
         return (annualizedReturn - annualRiskFreeRate) / annualizedStdDev;
+    }
+
+    public static decimal MaxDrawdown(this SortedDictionary<DateTime, decimal> equityHistory)
+    {
+        var maxDrawdown = 0m;
+        var peak = equityHistory.Values.First();
+
+        foreach (var equity in equityHistory.Values)
+        {
+            if (equity > peak)
+                peak = equity;
+
+            var drawdown = (peak - equity) / peak;
+            maxDrawdown = Math.Max(maxDrawdown, drawdown);
+        }
+
+        return maxDrawdown;
+    }
+
+    public static decimal RecoveryFactor(this SortedDictionary<DateTime, decimal> equityHistory)
+    {
+        if (equityHistory.Count == 0) return 0;
+
+        var start = equityHistory.Values.First();
+        var end = equityHistory.Values.Last();
+        var maxDrawdown = equityHistory.MaxDrawdown();
+
+        return (maxDrawdown == 0 || start == 0) ? decimal.MaxValue : (end - start) / Math.Abs(maxDrawdown * start);
+    }
+
+    public static decimal KellyCriterion(this SortedDictionary<DateTime, decimal> equityHistory)
+    {
+        if (equityHistory.Count == 0) return 0;
+
+        var returns = equityHistory.Values.ToRelativeReturns();
+        var winRate = returns.Count(r => r > 0) / (decimal)returns.Count;
+        var avgWin = returns.Where(r => r > 0).Average();
+        var avgLoss = returns.Where(r => r < 0).Average();
+
+        // Gewinnwahrscheinlichkeit
+        var p = winRate;
+
+        // Gewinnfaktor
+        var b = avgWin / Math.Abs(avgLoss);
+
+        // Verlustwahrscheinlichkeit
+        decimal q = 1 - p;
+
+        // Kelly-Formel
+        decimal f = (b * p - q) / b;
+
+        // Interpretationslogik: 
+        // - f <= 0: Trade vermeiden,
+        // - 0 < f <= 1: Optimale Positionsgröße,
+        // - f > 1: Hinweis auf überoptimistische Parameter, maximale Investition begrenzen.
+
+        return f;
+    }
+
+    public static decimal BuyAndHoldRatio(this SortedDictionary<DateTime, decimal> equityHistory, SortedDictionary<DateTime, Candle> candles)
+    {
+        if (equityHistory.Count == 0) return 0;
+        if (candles.Count == 0) return 0;
+
+        var equityStart = equityHistory.Values.First();
+        var equityEnd = equityHistory.Values.Last();
+        var candleStart = candles.Values.First().Close.ToDecimal();
+        var candleEnd = candles.Values.Last().Close.ToDecimal();
+
+        var equityPerformance = (equityEnd - equityStart) / equityStart;
+        var candlePerformance = (candleEnd - candleStart) / candleStart;
+
+        return equityPerformance / candlePerformance;
     }
 }

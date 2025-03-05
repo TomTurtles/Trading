@@ -32,7 +32,8 @@ public class BacktestingEngine : IBacktestingEngine
         Options = options;
         Logger = logger;
 
-        EventDispatcher.Subscribe<OnBacktestingPerformanceResultEventArgs>(HandleBacktestingPerformanceResult);
+        EventDispatcher.Subscribe<OnBacktestingPerformanceResultEventArgs>(LogPerformanceResult);
+        EventDispatcher.Subscribe<OnBacktestingPerformanceResultEventArgs>((s, e) => OnFinished?.Invoke(this, e));
         OnStateChanged?.Invoke(this, new(BacktestingState.Pending));
     }
 
@@ -96,7 +97,7 @@ public class BacktestingEngine : IBacktestingEngine
         await Exchange.NotifyAccountReportAsync(cancellationToken);
     }
 
-    private void HandleBacktestingPerformanceResult(object sender, OnBacktestingPerformanceResultEventArgs e)
+    private void LogPerformanceResult(object sender, OnBacktestingPerformanceResultEventArgs e)
     {
         var prefixGroups = e
             .ToKeyValuePairs()
@@ -107,11 +108,7 @@ public class BacktestingEngine : IBacktestingEngine
             });
 
         var sb = new StringBuilder()
-            .AppendLine()
-            .AppendLine()
-            .AppendLine($"----------------------------------------")
-            .AppendLine($"PERFORMANCE RESULT")
-            .AppendLine($"----------------------------------------");
+            .AppendLine();
 
         foreach (var group in prefixGroups)
         {
@@ -134,8 +131,6 @@ public class BacktestingEngine : IBacktestingEngine
 
         Logger.LogInformation(resultString);
         Debug.WriteLine(resultString);
-
-        OnFinished?.Invoke(this, e);
     }
 
     private object Format(object value)

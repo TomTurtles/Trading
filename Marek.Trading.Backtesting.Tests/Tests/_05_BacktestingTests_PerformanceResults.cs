@@ -8,66 +8,75 @@ public sealed class _05_BacktestingTests_PerformanceResults
     [TestMethod]
     public async Task _01_CreateMarketOrder_Long_BacktestingPerformanceResults_ShouldWorkAsync()
     {
-        // Arrange
-        var options = _serviceProvider.GetService<IOptions<BacktestingOptions>>();
-        Assert.IsNotNull(options);
-
-        var engine = _serviceProvider.GetService<IBacktestingEngine>();
-        Assert.IsNotNull(engine);
-
-        var exchange = _serviceProvider.GetService<IBacktestingExchange>();
-        Assert.IsNotNull(exchange);
-
-        var positionManagement = _serviceProvider.GetService<IBacktestingPositionManagement>();
-        Assert.IsNotNull(positionManagement);
-
-        var orderManagement = _serviceProvider.GetService<IBacktestingOrderManagement>();
-        Assert.IsNotNull(positionManagement);
-
-        var cashManagement = _serviceProvider.GetService<IBacktestingCashManagement>();
-        Assert.IsNotNull(positionManagement);
-
-        var assertionExecuted = false;
-        string? exceptionMessage = null;
-        engine.OnFinished += (async (s, e) =>
+        try
         {
-            try
+
+            // Arrange
+            var options = _serviceProvider.GetService<IOptions<BacktestingOptions>>();
+            Assert.IsNotNull(options);
+
+            var engine = _serviceProvider.GetService<IBacktestingEngine>();
+            Assert.IsNotNull(engine);
+
+            var exchange = _serviceProvider.GetService<IBacktestingExchange>();
+            Assert.IsNotNull(exchange);
+
+            var positionManagement = _serviceProvider.GetService<IBacktestingPositionManagement>();
+            Assert.IsNotNull(positionManagement);
+
+            var orderManagement = _serviceProvider.GetService<IBacktestingOrderManagement>();
+            Assert.IsNotNull(positionManagement);
+
+            var cashManagement = _serviceProvider.GetService<IBacktestingCashManagement>();
+            Assert.IsNotNull(positionManagement);
+
+            var assertionExecuted = false;
+            string? exceptionMessage = null;
+            engine.OnFinished += (async (s, e) =>
             {
-                // Assert im Event selbst
-                Assert.IsNotNull(e);
+                try
+                {
+                    // Assert im Event selbst
+                    Assert.IsNotNull(e);
 
-                var positions = await positionManagement.GetPositionsAsync();
-                Assert.IsNotNull(positions);
-                Assert.AreNotEqual(0, positions.Count);
+                    var positions = await positionManagement.GetPositionsAsync();
+                    Assert.IsNotNull(positions);
+                    Assert.AreNotEqual(0, positions.Count);
 
-                var marketPrice = await exchange.GetMarketPriceAsync();
+                    var marketPrice = await exchange.GetMarketPriceAsync();
 
-                var positionEquity = positions.Sum(p => (p.IsOpen() ? p.GetUnrealizedPNL(marketPrice) : 0) + p.RealizedPNL);
-                var totalFee = positions.Sum(p => p.Fee);
+                    var positionEquity = positions.Sum(p => (p.IsOpen() ? p.GetUnrealizedPNL(marketPrice) : 0) + p.RealizedPNL);
+                    var totalFee = positions.Sum(p => p.Fee);
 
-                var expectedEquity = options.Value.InitialCash + positionEquity - totalFee;
-                var equity = await exchange.GetEquityAsync();
-                Assert.AreEqual(Math.Round(expectedEquity, 8), Math.Round(equity, 8));
+                    var expectedEquity = options.Value.InitialCash + positionEquity - totalFee;
+                    var equity = await exchange.GetEquityAsync();
+                    Assert.AreEqual(Math.Round(expectedEquity, 8), Math.Round(equity, 8));
 
-            }
-            catch (Exception ex)
-            {
-                exceptionMessage = ex.Message;
-                Debug.WriteLine(exceptionMessage);  
-            }
-            finally
-            {
-                assertionExecuted = true;
-            }
-        });
+                }
+                catch (Exception ex)
+                {
+                    exceptionMessage = ex.Message;
+                    Debug.WriteLine(exceptionMessage);
+                }
+                finally
+                {
+                    assertionExecuted = true;
+                }
+            });
 
-        // Market Order
-        await engine.RunAsync();
+            // Market Order
+            await engine.RunAsync();
 
-        while (!assertionExecuted) await Task.Delay(1000);
+            while (!assertionExecuted) await Task.Delay(1000);
 
-        Assert.IsTrue(assertionExecuted);
-        Assert.IsNull(exceptionMessage);
+            Assert.IsTrue(assertionExecuted);
+            Assert.IsNull(exceptionMessage);
+        }
+        catch (Exception)
+        {
+
+            throw;
+        }
     }
 
     //[TestMethod]
