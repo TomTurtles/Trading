@@ -14,6 +14,7 @@ public class BacktestingEngine : IBacktestingEngine
 
     public event EventHandler<OnBacktestingStateChangedEventArgs> OnStateChanged;
     public event EventHandler<OnBacktestingPerformanceResultEventArgs> OnFinished;
+    public event EventHandler<OnBacktestingPositionClosedEventArgs> OnPositionClosed;
 
     public BacktestingEngine(
         IMareatorEventDispatcher eventDispatcher,
@@ -34,6 +35,7 @@ public class BacktestingEngine : IBacktestingEngine
 
         EventDispatcher.Subscribe<OnBacktestingPerformanceResultEventArgs>(LogPerformanceResult);
         EventDispatcher.Subscribe<OnBacktestingPerformanceResultEventArgs>((s, e) => OnFinished?.Invoke(this, e));
+        EventDispatcher.Subscribe<OnPositionClosedEventArgs>((s, e) => OnPositionClosed?.Invoke(this, new(e.Position)));
         OnStateChanged?.Invoke(this, new(BacktestingState.Pending));
     }
 

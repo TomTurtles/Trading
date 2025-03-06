@@ -8,4 +8,5 @@ public interface IBacktestingEngine
 
     event EventHandler<OnBacktestingStateChangedEventArgs> OnStateChanged;
     event EventHandler<OnBacktestingPerformanceResultEventArgs> OnFinished;
+    event EventHandler<OnBacktestingPositionClosedEventArgs> OnPositionClosed;
 }
