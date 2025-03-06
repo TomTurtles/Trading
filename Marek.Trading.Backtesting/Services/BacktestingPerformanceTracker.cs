@@ -64,7 +64,12 @@ public class BacktestingPerformanceTracker : IBacktestingPerformanceTracker
     {
         _stopwatch.Stop();
         Logger.LogInformation($"Duration: {_stopwatch.Elapsed}");
-        NotifyPerformanceResult();
+        Task.Run(async () =>
+        {
+            // Eventuelle Race Conditions zwischen den Events vorbeugen
+            await Task.Delay(3000);
+            NotifyPerformanceResult();
+        });
     }
 
     #endregion Start/Finish
@@ -121,13 +126,10 @@ public class BacktestingPerformanceTracker : IBacktestingPerformanceTracker
 
     #endregion EventHandlers
 
-    private async void NotifyPerformanceResult()
+    private void NotifyPerformanceResult()
     {
         try
         { 
-            // Warten wegen Race-Conditions und async Event Verarbeitung
-            await Task.Delay(10);
-
             var candles = _candles.OrderBy(c => c.Timestamp).ToList();
             var candlesHistory = new SortedDictionary<DateTime, Candle>(_candles.OrderBy(c => c.Timestamp).ToDictionary(c => c.Timestamp, c => c));
             var equityHistory = new SortedDictionary<DateTime, decimal>(_equityHistory.OrderBy(kvp => kvp.Key).ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToDecimal()));
@@ -171,20 +173,12 @@ public class BacktestingPerformanceTracker : IBacktestingPerformanceTracker
                 AveragePositionSize = positions.Average(p => p.Quantity).ToDecimal(),
 
                 // Indicators
-                WinRate = positions.Count == 0
-                    ? 0
-                    : positions.Count(p => p.RealizedPNL > 0) / (decimal)positions.Count,
-
-                WinLossRatio = positions.Count == 0
-                    ? 0
-                    : positions.Where(p => p.RealizedPNL < 0).Any()
-                        ? positions.Where(p => p.RealizedPNL > 0).Average(p => p.RealizedPNL - p.Fee).ToDecimal() / Math.Abs(positions.Where(p => p.RealizedPNL < 0).Average(p => p.RealizedPNL - p.Fee).ToDecimal())
-                        : decimal.MaxValue,
-
+                WinRate = positionHistory.WinRate(),
+                WinLossRatio = positionHistory.WinLossRatio(),
+                KellyCriterion = positionHistory.KellyCriterion(),
                 MaximumDrawdown = equityHistory.MaxDrawdown(),
                 RecoveryFactor = equityHistory.RecoveryFactor(),
                 SharpeRatio = equityHistory.SharpeRatio(),
-                KellyCriterion = equityHistory.KellyCriterion(),
                 BuyAndHoldRatio = equityHistory.BuyAndHoldRatio(candlesHistory),
             };
 

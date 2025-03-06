@@ -83,20 +83,30 @@ public static class PerformanceTrackerExtensions
         return (maxDrawdown == 0 || start == 0) ? decimal.MaxValue : (end - start) / Math.Abs(maxDrawdown * start);
     }
 
-    public static decimal KellyCriterion(this SortedDictionary<DateTime, decimal> equityHistory)
+    public static decimal WinRate(this SortedDictionary<DateTime, IBacktestingPosition> positionHistory)
     {
-        if (equityHistory.Count == 0) return 0;
+        if (positionHistory.Count == 0) return 0;
+        var positions = positionHistory.Values.ToList();
+        return positions.Count(p => p.RealizedPNL > 0) / (decimal)positions.Count;
+    }
 
-        var returns = equityHistory.Values.ToRelativeReturns();
-        var winRate = returns.Count(r => r > 0) / (decimal)returns.Count;
-        var avgWin = returns.Where(r => r > 0).Average();
-        var avgLoss = returns.Where(r => r < 0).Average();
+    public static decimal WinLossRatio(this SortedDictionary<DateTime, IBacktestingPosition> positionHistory)
+    {
+        if (positionHistory.Count == 0) return 0;
+        var positions = positionHistory.Values.ToList();
+        if (positions.Count(p => p.RealizedPNL < 0) == 0) return decimal.MaxValue;
+        return positions.Where(p => p.RealizedPNL > 0).Average(p => p.RealizedPNL - p.Fee).ToDecimal() / Math.Abs(positions.Where(p => p.RealizedPNL < 0).Average(p => p.RealizedPNL - p.Fee).ToDecimal());
+    }
+
+    public static decimal KellyCriterion(this SortedDictionary<DateTime, IBacktestingPosition> positionHistory)
+    {
+        if (positionHistory.Count == 0) return 0;
 
         // Gewinnwahrscheinlichkeit
-        var p = winRate;
+        var p = positionHistory.WinRate();
 
         // Gewinnfaktor
-        var b = avgWin / Math.Abs(avgLoss);
+        var b = positionHistory.WinLossRatio();
 
         // Verlustwahrscheinlichkeit
         decimal q = 1 - p;
