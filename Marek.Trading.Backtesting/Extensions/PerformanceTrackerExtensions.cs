@@ -124,17 +124,25 @@ public static class PerformanceTrackerExtensions
 
     public static decimal BuyAndHoldRatio(this SortedDictionary<DateTime, decimal> equityHistory, SortedDictionary<DateTime, Candle> candles)
     {
-        if (equityHistory.Count == 0) return 0;
-        if (candles.Count == 0) return 0;
+        if (!equityHistory.Any() || !candles.Any()) return 0;
 
-        var equityStart = equityHistory.Values.First();
-        var equityEnd = equityHistory.Values.Last();
-        var candleStart = candles.Values.First().Close.ToDecimal();
-        var candleEnd = candles.Values.Last().Close.ToDecimal();
+        if (!equityHistory.TryGetValue(equityHistory.First().Key, out var equityStart) ||
+            !equityHistory.TryGetValue(equityHistory.Last().Key, out var equityEnd) ||
+            !candles.TryGetValue(candles.First().Key, out var candleStartCandle) ||
+            !candles.TryGetValue(candles.Last().Key, out var candleEndCandle))
+        {
+            return 0;
+        }
+
+        var candleStart = candleStartCandle.Close.ToDecimal();
+        var candleEnd = candleEndCandle.Close.ToDecimal();
+
+        if (equityStart == 0 || candleStart == 0) return 0; // Schutz gegen Division durch 0
 
         var equityPerformance = (equityEnd - equityStart) / equityStart;
         var candlePerformance = (candleEnd - candleStart) / candleStart;
 
-        return equityPerformance / candlePerformance;
+        // Angepasste Formel für fairen Vergleich
+        return (equityPerformance - candlePerformance) / (Math.Abs(candlePerformance) + 1);
     }
 }
