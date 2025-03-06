@@ -138,6 +138,7 @@ public class BacktestingPositionManagement : IBacktestingPositionManagement
 
         var position = new Position()
         {
+            Id = Guid.NewGuid().ToString(),
             Symbol = order.Symbol,
             Side = order.ToPositionSide(),
             StopLossPrice = order.StopLossPrice,
