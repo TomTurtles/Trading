@@ -41,10 +41,6 @@ public class BacktestingExchange : ExchangeBase, IBacktestingExchange
 
 
     #region Requests
-    //public override Task<List<Candle>> GetHistoricalCandlesAsync(CandleInterval interval, DateTime start, DateTime end, int? limit = null, CancellationToken cancellationToken = default)
-    //{
-    //    throw new NotImplementedException();
-    //}
 
     public override Task<List<Candle>> GetCandlesAsync(CandleInterval candleInterval, int? limit = null, CancellationToken cancellationToken = default)
     {
@@ -128,6 +124,21 @@ public class BacktestingExchange : ExchangeBase, IBacktestingExchange
     public override Task<double> GetMarketPriceAsync(CancellationToken cancellationToken = default)
     {
         return Task.FromResult(Candle.Close);
+    }
+
+    public override  Task<IMarketProductInfo> GetMarketProductInfoAsync(CancellationToken cancellationToken = default)
+    {
+        var info = new MarketProductInfo()
+        { 
+            Symbol = Symbol,
+            State = MarketProductState.Open,
+            FaceValue = FaceValue,
+            TickSize = 0.01,
+            QuoteCurrency = Symbol.Split("_")[0],
+            BaseCurrency = Symbol.Split("_")[1],
+        };
+
+        return Task.FromResult<IMarketProductInfo>(info);
     }
 
     #endregion Requests

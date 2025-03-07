@@ -34,6 +34,8 @@ public abstract class ExchangeBase : IExchange, IExchangeInitializable
         => _options?.Symbol ?? throw new NullReferenceException(nameof(_options.Symbol));
     protected CandleInterval Interval 
         => _options?.Interval ?? throw new NullReferenceException(nameof(_options.Interval));
+    protected double FaceValue 
+        => _options?.FaceValue ?? throw new NullReferenceException(nameof(_options));
     protected IDictionary<string, object> Parameters
         => _options?.Parameters ?? new Dictionary<string, object>();
 
