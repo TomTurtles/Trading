@@ -43,5 +43,6 @@ public interface IExchange
 
     #region Market
     Task<double> GetMarketPriceAsync(CancellationToken cancellationToken = default);
+    Task<IMarketProductInfo> GetMarketProductInfoAsync(CancellationToken cancellationToken = default);
     #endregion Market
 }

@@ -77,6 +77,7 @@ public abstract class ExchangeBase : IExchange, IExchangeInitializable
     public virtual Task<double> GetLeverageAsync(CancellationToken cancellationToken = default) => Task.FromResult(1d);
     public abstract Task<double> GetMarginAsync(CancellationToken cancellationToken = default);
     public abstract Task<double> GetMarketPriceAsync(CancellationToken cancellationToken = default);
+    public abstract Task<IMarketProductInfo> GetMarketProductInfoAsync(CancellationToken cancellationToken = default);
 
     #endregion Abstract / Virtual
 }
