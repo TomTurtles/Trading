@@ -20,6 +20,10 @@ public class LiveTradingEngine : ILiveTradingEngine
     #region Events
 
     public EventHandler<OnStrategyDecisionEventArgs>? OnStrategyDecision { get; set; }
+    public EventHandler<OnPositionOpenedEventArgs>? OnPositionOpened { get; set; }
+    public EventHandler<OnPositionClosedEventArgs>? OnPositionClosed { get; set; }
+
+    #endregion Events
 
     public LiveTradingEngine(
         ILogger<LiveTradingEngine> logger,
@@ -35,10 +39,10 @@ public class LiveTradingEngine : ILiveTradingEngine
         EventDispatcher = eventDispatcher;
         Options = options.Value;
 
-        eventDispatcher.Subscribe<OnStrategyDecisionEventArgs>((s, e) => OnStrategyDecision?.Invoke(s, new(e.Candle, e.Decision)));
+        eventDispatcher.Subscribe<OnStrategyDecisionEventArgs>((s, e) => OnStrategyDecision?.Invoke(this, new(e.Candle, e.Decision)));
+        eventDispatcher.Subscribe<OnPositionOpenedEventArgs>((s, e) => OnPositionOpened?.Invoke(this, new(e.Timestamp, e.Position)));
+        eventDispatcher.Subscribe<OnPositionClosedEventArgs>((s, e) => OnPositionClosed?.Invoke(this, new(e.Timestamp, e.Position)));
     }
-
-    #endregion Events
 
 
     public async Task StartAsync(CancellationToken cancellationToken)
