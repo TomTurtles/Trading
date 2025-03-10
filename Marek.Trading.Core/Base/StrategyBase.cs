@@ -260,8 +260,11 @@ public abstract class StrategyBase
     #endregion Handle new Candle
 
 
+    #region Abstract EventHandlers
     //TODO: Handle updated Order
 
-    //TODO: Handle updated Position
+    public virtual Task OnPositionUpdateAsync(IPosition position, UpdatePositionCommandBuilder builder) => Task.CompletedTask;
+
+    #endregion Abstract EventHandlers
 }
 
