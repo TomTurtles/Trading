@@ -21,7 +21,7 @@ public class LiveTradingEngine : ILiveTradingEngine
 
     public EventHandler<OnStrategyDecisionEventArgs>? OnStrategyDecision { get; set; }
     public EventHandler<OnPositionOpenedEventArgs>? OnPositionOpened { get; set; }
-    EventHandler<OnPositionUpdatedEventArgs>? OnPositionUpdated { get; set; }
+    public EventHandler<OnPositionUpdatedEventArgs>? OnPositionUpdated { get; set; }
     public EventHandler<OnPositionClosedEventArgs>? OnPositionClosed { get; set; }
 
     #endregion Events
@@ -42,6 +42,7 @@ public class LiveTradingEngine : ILiveTradingEngine
 
         eventDispatcher.Subscribe<OnStrategyDecisionEventArgs>((s, e) => OnStrategyDecision?.Invoke(this, new(e.Candle, e.Decision)));
         eventDispatcher.Subscribe<OnPositionOpenedEventArgs>((s, e) => OnPositionOpened?.Invoke(this, new(e.Timestamp, e.Position)));
+        eventDispatcher.Subscribe<OnPositionUpdatedEventArgs>((s, e) => OnPositionUpdated?.Invoke(this, new(e.Timestamp, e.Position)));
         eventDispatcher.Subscribe<OnPositionClosedEventArgs>((s, e) => OnPositionClosed?.Invoke(this, new(e.Timestamp, e.Position)));
     }
 
@@ -80,6 +81,7 @@ public class LiveTradingEngine : ILiveTradingEngine
         State = LiveTradingState.Idle;
         Logger.LogInformation($"Livetrading stopped");
     }
+
 
     private async void HandleNewCandle(object sender, OnNewCandleEventArgs e)
     {
