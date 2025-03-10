@@ -7,6 +7,7 @@ public interface ILiveTradingEngine
 
     EventHandler<OnStrategyDecisionEventArgs>? OnStrategyDecision { get; set; }
     EventHandler<OnPositionOpenedEventArgs>? OnPositionOpened { get; set; }
+    EventHandler<OnPositionUpdatedEventArgs>? OnPositionUpdated { get; set; }
     EventHandler<OnPositionClosedEventArgs>? OnPositionClosed { get; set; }
 
     Task StartAsync(CancellationToken cancellationToken = default);

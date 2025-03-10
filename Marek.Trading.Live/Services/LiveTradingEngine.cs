@@ -21,6 +21,7 @@ public class LiveTradingEngine : ILiveTradingEngine
 
     public EventHandler<OnStrategyDecisionEventArgs>? OnStrategyDecision { get; set; }
     public EventHandler<OnPositionOpenedEventArgs>? OnPositionOpened { get; set; }
+    EventHandler<OnPositionUpdatedEventArgs>? OnPositionUpdated { get; set; }
     public EventHandler<OnPositionClosedEventArgs>? OnPositionClosed { get; set; }
 
     #endregion Events

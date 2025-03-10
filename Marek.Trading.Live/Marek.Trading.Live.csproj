@@ -16,7 +16,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Marek.Trading.Core" Version="0.0.10" />
+	  <PackageReference Include="Marek.Trading.Core" Version="0.0.13" />
 	</ItemGroup>
 
 </Project>
