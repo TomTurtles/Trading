@@ -26,6 +26,7 @@ public interface IExchange
     #endregion Orders
 
     #region Positions
+    EventHandler<OnPositionUpdatedEventArgs>? OnPositionUpdated { get; set; }
     Task<IPosition?> GetOpenPositionAsync(CancellationToken cancellationToken = default);
     Task<IEnumerable<IPosition>> GetPositionsAsync(CancellationToken cancellationToken = default);
     Task UpdatePositionAsync(string id, Action<IPosition> configure, CancellationToken cancellationToken = default);
